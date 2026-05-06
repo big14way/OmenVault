@@ -1,0 +1,25 @@
+{
+  "name": "@omenvault/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript utilities (env, RPC, ABI loaders, IPFS) for OmenVault bots.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./env": "./src/env.ts",
+    "./rpc": "./src/rpc.ts",
+    "./ipfs": "./src/ipfs.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ethers": "^6.13.4",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,36 @@
+name: omen-create-market
+description: Create a new OmenVault prediction market on Mantle Sepolia. Permissionless.
+version: 0.1.0
+runtime: node
+entry: index.mjs
+
+requires:
+  env:
+    - MANTLE_SEPOLIA_RPC_URL
+    - PRIVATE_KEY
+    - MARKET_FACTORY_ADDRESS
+  bins:
+    - node
+
+inputs:
+  - name: question
+    type: string
+    description: The yes/no question, e.g. "Will ETH close above $4500 on 2026-07-15?"
+    required: true
+  - name: resolutionAt
+    type: integer
+    description: Unix timestamp when the market resolves.
+    required: true
+  - name: alloraTopicId
+    type: string
+    description: Allora topic id (bytes32 hex) referenced by this market. Empty for none.
+    required: false
+  - name: collateralTier
+    type: integer
+    description: 0=USDT0 only, 1=USDY (~5% APY), 2=sUSDe (~12% APY)
+    required: true
+  - name: minStakeBps
+    type: integer
+    description: Anti-spam minimum stake (basis points of vault size).
+    required: false
+    default: 10

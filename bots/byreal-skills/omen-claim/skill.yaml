@@ -1,0 +1,18 @@
+name: omen-claim
+description: Claim post-resolution payout from an OmenVault market. Pays principal + LMSR upside + RWA yield share to winners.
+version: 0.1.0
+runtime: node
+entry: index.mjs
+
+requires:
+  env:
+    - MANTLE_SEPOLIA_RPC_URL
+    - PRIVATE_KEY
+  bins:
+    - node
+
+inputs:
+  - name: market
+    type: string
+    description: Market address.
+    required: true

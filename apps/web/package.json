@@ -1,0 +1,33 @@
+{
+  "name": "@omenvault/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OmenVault web app — Next.js 15 App Router. Owned by frontend team.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^15.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "viem": "^2.21.45",
+    "wagmi": "^2.13.0",
+    "@tanstack/react-query": "^5.59.0",
+    "@rainbow-me/rainbowkit": "^2.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.3",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "^15.0.3",
+    "tailwindcss": "^3.4.14",
+    "postcss": "^8.4.49",
+    "autoprefixer": "^10.4.20"
+  }
+}

@@ -1,0 +1,27 @@
+name: omen-vote-oracle
+description: Cast an oracle vote on an OmenVault market. Restricted to ORACLE_ROLE wallets.
+version: 0.1.0
+runtime: node
+entry: index.mjs
+
+requires:
+  env:
+    - MANTLE_SEPOLIA_RPC_URL
+    - PRIVATE_KEY
+    - ORACLE_SWARM_ADDRESS
+  bins:
+    - node
+
+inputs:
+  - name: market
+    type: string
+    description: Market address being resolved.
+    required: true
+  - name: vote
+    type: integer
+    description: 0=YES, 1=NO, 2=INVALID
+    required: true
+  - name: reasoningCid
+    type: string
+    description: IPFS CID of the oracle's reasoning blob.
+    required: true

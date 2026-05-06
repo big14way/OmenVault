@@ -1,0 +1,26 @@
+name: omen-enter
+description: Take a YES or NO position in an OmenVault market by depositing USDT0.
+version: 0.1.0
+runtime: node
+entry: index.mjs
+
+requires:
+  env:
+    - MANTLE_SEPOLIA_RPC_URL
+    - PRIVATE_KEY
+  bins:
+    - node
+
+inputs:
+  - name: market
+    type: string
+    description: Market contract address.
+    required: true
+  - name: side
+    type: integer
+    description: 0=YES, 1=NO
+    required: true
+  - name: amountUsdt0
+    type: string
+    description: USDT0 amount in base units (6 decimals).
+    required: true

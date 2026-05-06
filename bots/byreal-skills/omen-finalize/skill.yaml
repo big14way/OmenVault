@@ -1,0 +1,19 @@
+name: omen-finalize
+description: Finalize an OmenVault market once 3 oracle votes are in. Anyone can call.
+version: 0.1.0
+runtime: node
+entry: index.mjs
+
+requires:
+  env:
+    - MANTLE_SEPOLIA_RPC_URL
+    - PRIVATE_KEY
+    - ORACLE_SWARM_ADDRESS
+  bins:
+    - node
+
+inputs:
+  - name: market
+    type: string
+    description: Market address to finalize.
+    required: true

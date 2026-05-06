@@ -1,0 +1,23 @@
+{
+  "name": "@omenvault/nansen-watcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OmenVault Nansen watcher — caches smart-money flow signals; serves them locally to the trader.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@omenvault/shared": "workspace:*",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

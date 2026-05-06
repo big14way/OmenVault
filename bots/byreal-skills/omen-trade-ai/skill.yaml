@@ -1,0 +1,26 @@
+name: omen-trade-ai
+description: Run the OmenVault AI trader against a single market — synthesizes Allora forecast, Nansen flow, and market price into a sized position.
+version: 0.1.0
+runtime: node
+entry: index.mjs
+
+requires:
+  env:
+    - MANTLE_SEPOLIA_RPC_URL
+    - TRADER_PRIVATE_KEY
+    - ANTHROPIC_API_KEY
+    - ALLORA_API_KEY
+    - NANSEN_API_KEY
+  bins:
+    - node
+
+inputs:
+  - name: market
+    type: string
+    description: Market contract address to evaluate.
+    required: true
+  - name: dryRun
+    type: boolean
+    description: If true, prints the LLM decision without submitting a transaction.
+    required: false
+    default: false
