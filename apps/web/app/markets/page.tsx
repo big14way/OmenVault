@@ -1,12 +1,156 @@
-// /markets — list of all markets. Frontend team to wire reads from MarketFactory.allMarkets().
+"use client";
+
+import Link from "next/link";
+import {useMemo, useState} from "react";
+import {motion} from "framer-motion";
+import {Plus} from "@phosphor-icons/react/dist/ssr";
+import {Button} from "@/components/primitives/button";
+import {MarketCard} from "@/components/markets/market-card";
+import {
+    MarketsFilterBar,
+    type MarketFilters,
+} from "@/components/markets/markets-filter-bar";
+import {MarketsLiveRail} from "@/components/markets/markets-live-rail";
+import {MOCK_MARKETS} from "@/lib/mock-data";
+
 export default function MarketsListPage() {
+    const [filters, setFilters] = useState<MarketFilters>({
+        status: "active",
+        tier: "all",
+        sort: "volume",
+        search: "",
+    });
+
+    const counts = useMemo(
+        () => ({
+            all: MOCK_MARKETS.length,
+            active: MOCK_MARKETS.filter((m) => m.status === "active").length,
+            resolving: MOCK_MARKETS.filter((m) => m.status === "resolving").length,
+            resolved: MOCK_MARKETS.filter((m) => m.status === "resolved").length,
+        }),
+        []
+    );
+
+    const filtered = useMemo(() => {
+        let xs = MOCK_MARKETS.slice();
+        if (filters.status !== "all") xs = xs.filter((m) => m.status === filters.status);
+        if (filters.tier !== "all") xs = xs.filter((m) => m.tier === filters.tier);
+        if (filters.search.trim()) {
+            const s = filters.search.toLowerCase();
+            xs = xs.filter((m) => m.question.toLowerCase().includes(s) || m.id.includes(s));
+        }
+        switch (filters.sort) {
+            case "volume":
+                xs.sort((a, b) => b.volumeUsdt0 - a.volumeUsdt0);
+                break;
+            case "yield":
+                xs.sort((a, b) => b.yieldEarned - a.yieldEarned);
+                break;
+            case "deadline":
+                xs.sort((a, b) => a.resolutionAt - b.resolutionAt);
+                break;
+            case "ai":
+                xs.sort((a, b) => b.aiTradersActive - a.aiTradersActive);
+                break;
+        }
+        return xs;
+    }, [filters]);
+
     return (
-        <main className="min-h-screen px-6 py-16 max-w-5xl mx-auto">
-            <h1 className="font-display text-5xl">Markets</h1>
-            <p className="mt-4 text-ink-mute">List of all live and resolved markets.</p>
-            <div className="mt-8 border border-paper-line p-12 text-center text-ink-mute font-mono text-sm">
-                MarketCard list goes here. Wire to MarketFactory.allMarkets().
-            </div>
+        <main className="relative pb-32">
+            {/* Page header */}
+            <section className="border-b border-border">
+                <div className="max-w-[1440px] mx-auto px-6 md:px-10 pt-14 pb-10">
+                    <motion.div
+                        initial={{opacity: 0, y: 8}}
+                        animate={{opacity: 1, y: 0}}
+                        transition={{duration: 0.5}}
+                        className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8"
+                    >
+                        <div>
+                            <p className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute mb-3">
+                                All markets
+                            </p>
+                            <h1 className="font-display font-extrabold text-display-lg text-bone leading-[1.02] text-balance">
+                                Open markets,{" "}
+                                <span className="text-amber">live agents.</span>
+                            </h1>
+                            <p className="mt-5 text-bone-soft max-w-prose text-pretty">
+                                Filter by status, collateral tier, or AI activity. Click any market
+                                to enter, watch agents, or claim a settled position.
+                            </p>
+                        </div>
+
+                        <div className="shrink-0">
+                            <Button asChild size="md" variant="outline">
+                                <Link href="/markets/new">
+                                    <Plus size={12} weight="regular" />
+                                    New market
+                                </Link>
+                            </Button>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* Body — grid of cards + sticky live rail */}
+            <section className="max-w-[1440px] mx-auto px-6 md:px-10 mt-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Cards column */}
+                    <div className="lg:col-span-8 xl:col-span-9">
+                        <MarketsFilterBar value={filters} onChange={setFilters} counts={counts} />
+
+                        <div className="mt-6 mb-6 flex items-center justify-between">
+                            <p className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute tabular">
+                                {filtered.length} {filtered.length === 1 ? "market" : "markets"}
+                            </p>
+                        </div>
+
+                        {filtered.length === 0 ? (
+                            <EmptyState
+                                onReset={() =>
+                                    setFilters({...filters, search: "", tier: "all"})
+                                }
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {filtered.map((m, i) => (
+                                    <MarketCard key={m.id} market={m} index={i} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Live rail */}
+                    <div className="lg:col-span-4 xl:col-span-3">
+                        <div className="lg:sticky lg:top-24">
+                            <MarketsLiveRail />
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
+    );
+}
+
+function EmptyState({onReset}: {onReset: () => void}) {
+    return (
+        <div className="border border-border bg-surface p-16 text-center">
+            <p className="font-display font-bold text-3xl text-bone-soft mb-2">
+                No markets match.
+            </p>
+            <p className="text-sm text-fg-mute mb-6 max-w-md mx-auto">
+                Either nothing fits these filters yet, or the search came back empty. Loosen the
+                filters or be the first to create one.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+                <Button variant="dim" size="md" onClick={onReset}>
+                    Reset filters
+                </Button>
+                <Button asChild size="md" variant="primary">
+                    <Link href="/markets/new">Create market</Link>
+                </Button>
+            </div>
+        </div>
     );
 }
