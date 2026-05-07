@@ -39,4 +39,8 @@ contract MockSUSDe is ERC20 {
     function convertToAssets(uint256 shares) external view returns (uint256) {
         return (shares * pricePerShareE18()) / 1e18;
     }
+
+    function convertToShares(uint256 assets) external view returns (uint256) {
+        return (assets * 1e18) / pricePerShareE18();
+    }
 }

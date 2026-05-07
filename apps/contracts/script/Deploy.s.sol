@@ -35,7 +35,8 @@ contract DeployScript is Script {
             deployer,
             registry,
             address(usdt0),
-            address(0), // collateralVaultImpl — vaults are deployed per Market by team logic.
+            address(usdy),
+            address(sUSDe),
             address(oracleSwarm),
             address(alloraConsumer),
             address(decisionLog)
