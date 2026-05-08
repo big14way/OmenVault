@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./env": "./src/env.ts",
     "./rpc": "./src/rpc.ts",
-    "./ipfs": "./src/ipfs.ts"
+    "./ipfs": "./src/ipfs.ts",
+    "./abis": "./src/abis/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
