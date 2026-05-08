@@ -12,7 +12,8 @@
     "./ipfs": "./src/ipfs.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "ethers": "^6.13.4",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
