@@ -11,6 +11,7 @@
     "start:b": "ORACLE=B tsx src/index.ts",
     "start:c": "ORACLE=C tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
+    "demo": "tsx scripts/demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
