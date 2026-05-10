@@ -337,7 +337,186 @@ export const MOCK_DECISIONS: Decision[] = [
         payload: {},
         txHash: "0x293a4b5c6d7e8f9012345678abcdef1234567890abcdef123456789012345678",
     },
+    ...generateLedgerHistory(),
 ];
+
+// Procedural ledger fill for /audit density. Hand-curated entries above carry
+// the demo-critical reasoning blobs; these are background activity that makes
+// the ledger feel like a real running protocol rather than a 9-row toy.
+function generateLedgerHistory(): Decision[] {
+    const minute = 60_000;
+    const hour = 60 * minute;
+
+    const traderShort = [
+        "Allora at 58%, market at 0.52. Modest edge, sizing small.",
+        "Allora 71% YES, three smart-money wallets long. Comfortable entry.",
+        "Forecast and price drifted within 1%. Passing this cycle.",
+        "Tail-risk; sizing 5% of vault on the contrarian.",
+        "Smart-money flipped sides overnight. Closing the position next cycle.",
+        "Edge expanded after the latest Allora poll. Adding to position.",
+        "Vault cap reached on YES. Holding.",
+    ];
+
+    const oracleSources: [string, string][] = [
+        ["CoinGecko", "Binance"],
+        ["Kraken", "Coinbase"],
+        ["Cryptocompare", "Pyth"],
+        ["Bitstamp", "Binance"],
+        ["Gemini", "Coinbase"],
+    ];
+
+    const txFor = (seed: number) => {
+        const hex = (seed * 0x9e3779b1).toString(16).padStart(8, "0");
+        const blocks = [hex, hex.split("").reverse().join(""), hex, hex.split("").reverse().join("")];
+        return "0x" + blocks.join("").slice(0, 64);
+    };
+
+    const items: Decision[] = [];
+    let id = 10;
+    const traders = [42, 17, 88, 26, 31, 64];
+    const oracles = [7, 8, 9];
+    const bettors = [103, 211, 318, 442, 519];
+    const markets = ["7", "5", "4", "3", "6"];
+
+    // Spread across last 72 hours with a slight bias toward recent
+    const ts = (h: number, m = 0) => now - h * hour - m * minute;
+
+    // Recent traders
+    const traderTrace: {h: number; m: number; t: number; market: string; side: "YES" | "NO"; price: number; amt: number; reason: string; allora: number; nansen: number; conf: number}[] = [
+        {h: 0, m: 7, t: 42, market: "7", side: "YES", price: 0.62, amt: 800, reason: traderShort[5], allora: 0.65, nansen: 3, conf: 0.74},
+        {h: 0, m: 21, t: 26, market: "5", side: "YES", price: 0.7, amt: 350, reason: traderShort[1], allora: 0.71, nansen: 2, conf: 0.68},
+        {h: 0, m: 41, t: 88, market: "3", side: "NO", price: 0.82, amt: 250, reason: traderShort[3], allora: 0.22, nansen: 0, conf: 0.49},
+        {h: 1, m: 8, t: 17, market: "4", side: "YES", price: 0.34, amt: 420, reason: traderShort[0], allora: 0.38, nansen: 1, conf: 0.55},
+        {h: 1, m: 32, t: 31, market: "6", side: "YES", price: 0.54, amt: 180, reason: traderShort[0], allora: 0.57, nansen: 0, conf: 0.5},
+        {h: 2, m: 18, t: 42, market: "7", side: "YES", price: 0.6, amt: 1200, reason: traderShort[5], allora: 0.63, nansen: 3, conf: 0.71},
+        {h: 3, m: 4, t: 64, market: "4", side: "NO", price: 0.67, amt: 700, reason: traderShort[3], allora: 0.29, nansen: 1, conf: 0.58},
+        {h: 4, m: 22, t: 26, market: "5", side: "YES", price: 0.69, amt: 500, reason: traderShort[1], allora: 0.7, nansen: 2, conf: 0.66},
+        {h: 6, m: 47, t: 17, market: "7", side: "YES", price: 0.58, amt: 220, reason: traderShort[0], allora: 0.6, nansen: 2, conf: 0.54},
+        {h: 9, m: 12, t: 31, market: "6", side: "NO", price: 0.46, amt: 95, reason: traderShort[2], allora: 0.5, nansen: 0, conf: 0.48},
+        {h: 12, m: 33, t: 42, market: "7", side: "YES", price: 0.55, amt: 1500, reason: traderShort[1], allora: 0.62, nansen: 3, conf: 0.78},
+        {h: 18, m: 4, t: 88, market: "5", side: "NO", price: 0.32, amt: 600, reason: traderShort[3], allora: 0.28, nansen: 0, conf: 0.52},
+        {h: 24, m: 19, t: 26, market: "4", side: "YES", price: 0.36, amt: 340, reason: traderShort[0], allora: 0.4, nansen: 1, conf: 0.56},
+        {h: 36, m: 8, t: 17, market: "7", side: "YES", price: 0.51, amt: 280, reason: traderShort[0], allora: 0.55, nansen: 1, conf: 0.52},
+        {h: 48, m: 41, t: 42, market: "5", side: "YES", price: 0.68, amt: 950, reason: traderShort[1], allora: 0.7, nansen: 2, conf: 0.68},
+    ];
+    traderTrace.forEach((d, i) => {
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.t,
+            agentType: "Trader",
+            kind: "ENTER",
+            marketId: d.market,
+            payload: {
+                side: d.side,
+                amount: d.amt,
+                price: d.price,
+                ipfsHash: `QmTrader${d.t}-${i}`,
+                reasoning: d.reason,
+                alloraForecast: d.allora,
+                nansenWallets: d.nansen,
+                confidence: d.conf,
+            },
+            txHash: txFor(id),
+        });
+    });
+
+    // Bettor entries
+    const bettorTrace: {h: number; m: number; b: number; market: string; side: "YES" | "NO"; price: number; amt: number}[] = [
+        {h: 0, m: 3, b: 103, market: "7", side: "NO", price: 0.45, amt: 50},
+        {h: 0, m: 33, b: 211, market: "5", side: "YES", price: 0.7, amt: 120},
+        {h: 1, m: 18, b: 318, market: "7", side: "YES", price: 0.6, amt: 220},
+        {h: 2, m: 50, b: 442, market: "4", side: "NO", price: 0.66, amt: 90},
+        {h: 5, m: 22, b: 519, market: "6", side: "YES", price: 0.55, amt: 410},
+        {h: 11, m: 7, b: 103, market: "5", side: "YES", price: 0.68, amt: 180},
+        {h: 20, m: 39, b: 211, market: "3", side: "NO", price: 0.83, amt: 75},
+        {h: 30, m: 14, b: 318, market: "7", side: "YES", price: 0.53, amt: 60},
+    ];
+    bettorTrace.forEach((d) => {
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.b,
+            agentType: "Bettor",
+            kind: "ENTER",
+            marketId: d.market,
+            payload: {side: d.side, amount: d.amt, price: d.price},
+            txHash: txFor(id),
+        });
+    });
+
+    // Oracle votes (other markets, not just the resolving one in hand-curated list)
+    const oracleTrace: {h: number; m: number; o: number; market: string; outcome: "YES" | "NO" | "INVALID"; sources: [string, string]; reasoning: string}[] = [
+        {h: 14, m: 22, o: 7, market: "1", outcome: "YES", sources: oracleSources[0], reasoning: "CPI print confirmed at 2.3% YoY. Threshold of 2.5% cleared with margin."},
+        {h: 14, m: 24, o: 8, market: "1", outcome: "YES", sources: oracleSources[1], reasoning: "BLS release matches CoinGecko parsing. Confirmed YES."},
+        {h: 14, m: 28, o: 9, market: "1", outcome: "YES", sources: oracleSources[2], reasoning: "BLS direct. Final reading 2.3%. Confirmed."},
+        {h: 14, m: 32, o: 0, market: "1", outcome: "YES", sources: ["system", "system"], reasoning: ""},
+    ];
+    oracleTrace.forEach((d) => {
+        const kind: "VOTE" | "FINALIZE" = d.o === 0 ? "FINALIZE" : "VOTE";
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.o,
+            agentType: d.o === 0 ? "System" : "OracleNode",
+            kind,
+            marketId: d.market,
+            payload: kind === "VOTE"
+                ? {
+                      outcome: d.outcome,
+                      ipfsHash: `QmOracle${d.o}-${d.market}`,
+                      reasoning: d.reasoning,
+                      sources: d.sources,
+                  }
+                : {outcome: d.outcome},
+            txHash: txFor(id),
+        });
+    });
+
+    // Claims after the resolved market (id=1)
+    const claimTrace: {h: number; m: number; b: number}[] = [
+        {h: 13, m: 4, b: 103},
+        {h: 13, m: 22, b: 211},
+        {h: 14, m: 5, b: 442},
+        {h: 19, m: 38, b: 318},
+    ];
+    claimTrace.forEach((d) => {
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.b,
+            agentType: "Bettor",
+            kind: "CLAIM",
+            marketId: "1",
+            payload: {},
+            txHash: txFor(id),
+        });
+    });
+
+    // Older market creations
+    items.push({
+        id: `d-${(id++).toString().padStart(3, "0")}`,
+        timestamp: now - 12 * day,
+        agentId: 0,
+        agentType: "System",
+        kind: "CREATE_MARKET",
+        marketId: "5",
+        payload: {},
+        txHash: txFor(id),
+    });
+    items.push({
+        id: `d-${(id++).toString().padStart(3, "0")}`,
+        timestamp: now - 28 * day,
+        agentId: 0,
+        agentType: "System",
+        kind: "CREATE_MARKET",
+        marketId: "4",
+        payload: {},
+        txHash: txFor(id),
+    });
+
+    return items;
+}
 
 export const MOCK_ORACLE_VOTES: Record<string, OracleVote[]> = {
     "2": [
