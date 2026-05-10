@@ -71,7 +71,7 @@ export function AgentReasoningCard({
     const sideTone = side === "YES" ? "mint" : "coral";
 
     return (
-        <article className="relative bg-surface border border-border group hover:border-amber/50 transition-colors duration-300">
+        <article className="relative bg-surface border border-border group hover:border-border-strong transition-colors duration-300">
             {/* Top hairline accent — amber for AI cards */}
             <span className="absolute top-0 left-0 right-0 h-px bg-amber" />
 

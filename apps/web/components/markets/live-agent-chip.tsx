@@ -1,6 +1,3 @@
-"use client";
-
-import {motion} from "framer-motion";
 import {Robot, Stamp, User} from "@phosphor-icons/react/dist/ssr";
 import {emblemFor} from "@/lib/emblem";
 import {relativeTime, shortAddress} from "@/lib/format";
@@ -202,29 +199,10 @@ function Chip({
             </span>
 
             <span className="ml-auto inline-flex items-center gap-1.5">
-                <span className="relative inline-flex h-2 w-2 items-center justify-center">
-                    {/* Expanding ring — explicit framer animation so it always runs */}
-                    <motion.span
-                        animate={{scale: [1, 2.6], opacity: [0.7, 0]}}
-                        transition={{
-                            duration: 1.6,
-                            repeat: Infinity,
-                            ease: "easeOut",
-                        }}
-                        className="absolute inline-flex h-2 w-2 rounded-full bg-amber"
-                    />
-                    {/* Core dot, breathing slightly */}
-                    <motion.span
-                        animate={{opacity: [0.85, 1, 0.85]}}
-                        transition={{
-                            duration: 1.6,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber"
-                        style={{boxShadow: "0 0 8px rgba(242, 163, 65, 0.9)"}}
-                    />
-                </span>
+                <span
+                    className="inline-flex h-1.5 w-1.5 rounded-full bg-amber"
+                    style={{boxShadow: "0 0 4px rgba(242, 163, 65, 0.45)"}}
+                />
                 <span className="font-mono text-[10px] tabular text-fg-mute shrink-0">
                     {relativeTime(timestamp)}
                 </span>

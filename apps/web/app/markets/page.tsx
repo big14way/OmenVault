@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {useMemo, useState} from "react";
-import {motion} from "framer-motion";
 import {Plus} from "@phosphor-icons/react/dist/ssr";
 import {Button} from "@/components/primitives/button";
 import {MarketCard} from "@/components/markets/market-card";
@@ -61,16 +60,8 @@ export default function MarketsListPage() {
             {/* Page header */}
             <section className="border-b border-border">
                 <div className="max-w-[1440px] mx-auto px-6 md:px-10 pt-14 pb-10">
-                    <motion.div
-                        initial={{opacity: 0, y: 8}}
-                        animate={{opacity: 1, y: 0}}
-                        transition={{duration: 0.5}}
-                        className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8"
-                    >
+                    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
                         <div>
-                            <p className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute mb-3">
-                                All markets
-                            </p>
                             <h1 className="font-display font-extrabold text-display-lg text-bone leading-[1.02] text-balance">
                                 Open markets,{" "}
                                 <span className="text-amber">live agents.</span>
@@ -89,7 +80,7 @@ export default function MarketsListPage() {
                                 </Link>
                             </Button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </section>
 
@@ -114,8 +105,8 @@ export default function MarketsListPage() {
                             />
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {filtered.map((m, i) => (
-                                    <MarketCard key={m.id} market={m} index={i} />
+                                {filtered.map((m) => (
+                                    <MarketCard key={m.id} market={m} />
                                 ))}
                             </div>
                         )}

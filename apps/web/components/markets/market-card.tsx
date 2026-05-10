@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import {motion} from "framer-motion";
 import {ArrowUpRight, Robot} from "@phosphor-icons/react/dist/ssr";
 import {Badge} from "@/components/primitives/badge";
 import {OutcomeBar} from "./outcome-bar";
@@ -15,7 +14,6 @@ import {cn} from "@/lib/cn";
 interface MarketCardProps {
     market: Market;
     className?: string;
-    index?: number;
 }
 
 const TIER_TONE = {
@@ -31,26 +29,16 @@ const STATUS_LABEL: Record<Market["status"], string> = {
     disputed: "Disputed",
 };
 
-export function MarketCard({market, className, index = 0}: MarketCardProps) {
+export function MarketCard({market, className}: MarketCardProps) {
     const apy = TIER_APY[market.tier];
     const isResolved = market.status === "resolved";
     const recent = decisionsForMarket(market.id)[0];
 
     return (
-        <motion.div
-            initial={{opacity: 0, y: 14}}
-            whileInView={{opacity: 1, y: 0}}
-            viewport={{once: true, margin: "-60px"}}
-            transition={{
-                duration: 0.5,
-                delay: Math.min(index * 0.05, 0.3),
-                ease: [0.22, 1, 0.36, 1],
-            }}
-            className={cn("group h-full", className)}
-        >
+        <div className={cn("group h-full", className)}>
             <Link
                 href={`/markets/${market.id}`}
-                className="relative flex flex-col h-full bg-surface border border-border hover:border-amber/50 transition-all duration-300 ease-editorial overflow-hidden"
+                className="relative flex flex-col h-full bg-surface border border-border hover:border-border-strong transition-all duration-300 ease-editorial overflow-hidden"
             >
                 {/* Hover ember on top edge */}
                 <span
@@ -158,6 +146,6 @@ export function MarketCard({market, className, index = 0}: MarketCardProps) {
                     />
                 )}
             </Link>
-        </motion.div>
+        </div>
     );
 }

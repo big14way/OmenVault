@@ -68,7 +68,7 @@ export function TopNav() {
 
                 <div className="hidden md:flex items-center gap-4">
                     <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-eyebrow font-mono text-fg-mute">
-                        <LiveDot />
+                        <LiveDot variant="static" />
                         Mantle Sepolia
                     </span>
                     <Button size="sm" variant="outline">
