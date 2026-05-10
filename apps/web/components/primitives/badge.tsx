@@ -35,7 +35,21 @@ export function Badge({className, tone, size, ...props}: BadgeProps) {
     return <span className={cn(badgeStyles({tone, size}), className)} {...props} />;
 }
 
-export function LiveDot({className}: {className?: string}) {
+export function LiveDot({
+    className,
+    variant = "pulse",
+}: {
+    className?: string;
+    variant?: "pulse" | "static";
+}) {
+    if (variant === "static") {
+        return (
+            <span
+                className={cn("inline-flex h-1.5 w-1.5 rounded-full bg-amber", className)}
+                style={{boxShadow: "0 0 4px rgba(242, 163, 65, 0.45)"}}
+            />
+        );
+    }
     return (
         <span className={cn("relative inline-flex h-1.5 w-1.5", className)}>
             <span className="absolute inline-flex h-full w-full rounded-full bg-amber opacity-60 animate-ping" />

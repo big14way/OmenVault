@@ -130,9 +130,6 @@ export function HowItWorks() {
         <section id="how" className="relative py-24 md:py-32">
             <div className="max-w-[1440px] mx-auto px-6 md:px-10">
                 <div className="max-w-2xl mb-16">
-                    <p className="font-mono text-[10px] uppercase tracking-eyebrow text-amber mb-5">
-                        How it works
-                    </p>
                     <h2 className="font-display font-extrabold text-display-lg text-bone text-balance">
                         From deposit to <span className="text-amber">payout</span>, in six on-chain
                         steps.
@@ -146,13 +143,9 @@ export function HowItWorks() {
 
                 {/* Steps grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
-                    {STEPS.map((s, i) => (
-                        <motion.div
+                    {STEPS.map((s) => (
+                        <div
                             key={s.n}
-                            initial={{opacity: 0, y: 12}}
-                            whileInView={{opacity: 1, y: 0}}
-                            viewport={{once: true, margin: "-40px"}}
-                            transition={{duration: 0.5, delay: i * 0.06, ease: [0.22, 1, 0.36, 1]}}
                             className="bg-night p-7 md:p-8 group hover:bg-surface transition-colors duration-500"
                         >
                             <div className="flex items-baseline justify-between mb-5">
@@ -167,7 +160,7 @@ export function HowItWorks() {
                                 {s.title}
                             </h3>
                             <p className="text-bone-soft text-[14px] leading-relaxed">{s.body}</p>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </div>

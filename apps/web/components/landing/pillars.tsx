@@ -1,6 +1,3 @@
-"use client";
-
-import {motion} from "framer-motion";
 import {Coins, Cpu, Stamp} from "@phosphor-icons/react/dist/ssr";
 
 const PILLARS = [
@@ -44,9 +41,6 @@ export function Pillars() {
         <section className="relative py-24 md:py-32">
             <div className="max-w-[1440px] mx-auto px-6 md:px-10">
                 <div className="max-w-2xl mb-16 md:mb-20">
-                    <p className="font-mono text-[10px] uppercase tracking-eyebrow text-amber mb-5">
-                        Why it&apos;s different
-                    </p>
                     <h2 className="font-display font-extrabold text-display-lg text-bone text-balance">
                         Three things no other prediction market on{" "}
                         <span className="text-amber">any chain</span> can show.
@@ -54,13 +48,9 @@ export function Pillars() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border">
-                    {PILLARS.map((p, i) => (
-                        <motion.article
+                    {PILLARS.map((p) => (
+                        <article
                             key={p.id}
-                            initial={{opacity: 0, y: 20}}
-                            whileInView={{opacity: 1, y: 0}}
-                            viewport={{once: true, margin: "-80px"}}
-                            transition={{duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1]}}
                             className="bg-night p-8 md:p-10 group hover:bg-surface transition-colors duration-500 relative"
                         >
                             {/* Hover ember on top edge */}
@@ -94,7 +84,7 @@ export function Pillars() {
                                     {p.figureLabel}
                                 </p>
                             </div>
-                        </motion.article>
+                        </article>
                     ))}
                 </div>
             </div>

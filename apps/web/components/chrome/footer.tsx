@@ -77,7 +77,7 @@ export function Footer() {
 
                     {/* Right — spec sheet */}
                     <div className="lg:col-span-6">
-                        <p className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute mb-4">
+                        <p className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-faint mb-4">
                             Spec
                         </p>
                         <dl className="divide-y divide-border-soft">
