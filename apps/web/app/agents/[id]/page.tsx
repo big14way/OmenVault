@@ -59,6 +59,28 @@ export default function AgentProfilePage() {
             />
 
             <div className="max-w-[1440px] mx-auto w-full px-6 md:px-10 pt-12 flex-1 flex flex-col gap-14">
+                {/* Operator cross-link — only on Oracle agents */}
+                {agent.type === "OracleNode" && (
+                    <Link
+                        href={`/oracle/${agent.id}`}
+                        className="inline-flex items-center justify-between gap-4 border border-violet/40 bg-violet/[0.06] hover:bg-violet/[0.12] px-5 py-4 transition-colors group"
+                    >
+                        <div className="flex flex-col">
+                            <span className="font-mono text-[10.5px] uppercase tracking-eyebrow text-violet">
+                                Operator-only · authenticated route
+                            </span>
+                            <span className="font-display font-bold text-[16px] text-bone mt-0.5 group-hover:text-violet transition-colors">
+                                Open operator dashboard
+                            </span>
+                        </div>
+                        <ArrowRight
+                            size={14}
+                            weight="regular"
+                            className="text-violet group-hover:translate-x-0.5 transition-transform"
+                        />
+                    </Link>
+                )}
+
                 {/* Recent decisions */}
                 <section>
                     <header className="flex items-baseline justify-between mb-4">
