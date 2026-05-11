@@ -199,7 +199,111 @@ export const MOCK_AGENTS: Agent[] = [
         lastActionAt: now - 36 * 60_000,
         createdAt: now - 22 * day,
     },
+    ...generateAgentRoster(),
 ];
+
+// Procedural roster fill. Hand-curated agents above are the ones referenced
+// in MOCK_DECISIONS and the demo flow. These extras give /agents/registry
+// a populated feel without needing to wire each into the activity stream.
+function generateAgentRoster(): Agent[] {
+    const traderSeeds: {id: number; rep: number; wr: number; cap: number; daysAgo: number; lastMin: number}[] = [
+        {id: 12, rep: 640, wr: 0.66, cap: 3_200, daysAgo: 38, lastMin: 8},
+        {id: 19, rep: 590, wr: 0.61, cap: 2_700, daysAgo: 31, lastMin: 23},
+        {id: 23, rep: 480, wr: 0.55, cap: 1_400, daysAgo: 26, lastMin: 110},
+        {id: 26, rep: 690, wr: 0.69, cap: 2_900, daysAgo: 41, lastMin: 4},
+        {id: 31, rep: 350, wr: 0.49, cap: 980, daysAgo: 18, lastMin: 220},
+        {id: 38, rep: 560, wr: 0.58, cap: 1_800, daysAgo: 29, lastMin: 60},
+        {id: 51, rep: 290, wr: 0.46, cap: 720, daysAgo: 15, lastMin: 340},
+        {id: 64, rep: 470, wr: 0.54, cap: 1_650, daysAgo: 24, lastMin: 180},
+        {id: 71, rep: 620, wr: 0.63, cap: 2_400, daysAgo: 33, lastMin: 47},
+        {id: 79, rep: 380, wr: 0.50, cap: 1_100, daysAgo: 20, lastMin: 95},
+    ];
+
+    const oracleSeeds: {id: number; rep: number; maj: number; daysAgo: number; lastHours: number}[] = [
+        {id: 11, rep: 810, maj: 0.88, daysAgo: 75, lastHours: 4},
+        {id: 13, rep: 720, maj: 0.81, daysAgo: 60, lastHours: 9},
+        {id: 14, rep: 690, maj: 0.79, daysAgo: 60, lastHours: 9},
+        {id: 21, rep: 540, maj: 0.71, daysAgo: 42, lastHours: 18},
+        {id: 22, rep: 480, maj: 0.68, daysAgo: 42, lastHours: 21},
+    ];
+
+    const bettorSeeds: {id: number; cap: number; daysAgo: number; lastHours: number}[] = [
+        {id: 104, cap: 420, daysAgo: 12, lastHours: 3},
+        {id: 109, cap: 1_120, daysAgo: 19, lastHours: 7},
+        {id: 116, cap: 280, daysAgo: 8, lastHours: 12},
+        {id: 124, cap: 1_640, daysAgo: 26, lastHours: 2},
+        {id: 138, cap: 540, daysAgo: 11, lastHours: 5},
+        {id: 152, cap: 90, daysAgo: 5, lastHours: 22},
+        {id: 167, cap: 2_240, daysAgo: 30, lastHours: 1},
+        {id: 181, cap: 730, daysAgo: 17, lastHours: 14},
+    ];
+
+    const owner = (seed: number) =>
+        "0x" + (seed * 0x9e3779b1).toString(16).padStart(8, "0").repeat(5).slice(0, 40);
+
+    const xs: Agent[] = [];
+    traderSeeds.forEach((s) => {
+        xs.push({
+            id: s.id,
+            type: "Trader",
+            owner: owner(s.id * 7),
+            reputation: s.rep,
+            winRate: s.wr,
+            capitalDeployed: s.cap,
+            lastActionAt: now - s.lastMin * 60_000,
+            createdAt: now - s.daysAgo * day,
+        });
+    });
+    oracleSeeds.forEach((s) => {
+        xs.push({
+            id: s.id,
+            type: "OracleNode",
+            owner: owner(s.id * 11),
+            reputation: s.rep,
+            majorityAlignment: s.maj,
+            lastActionAt: now - s.lastHours * 3_600_000,
+            createdAt: now - s.daysAgo * day,
+        });
+    });
+    bettorSeeds.forEach((s) => {
+        xs.push({
+            id: s.id,
+            type: "Bettor",
+            owner: owner(s.id * 13),
+            reputation: 0,
+            capitalDeployed: s.cap,
+            lastActionAt: now - s.lastHours * 3_600_000,
+            createdAt: now - s.daysAgo * day,
+        });
+    });
+    return xs;
+}
+
+// Deterministic reputation history for sparklines. Seeded by agent id so
+// the chart is stable across renders and the same agent always shows the
+// same trajectory.
+export function reputationHistoryFor(agent: Agent, points = 24): number[] {
+    let s = (agent.id * 0x9e3779b1 + 0x12345) >>> 0;
+    const rand = () => {
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    // Random walk from a low starting reputation to the current one, with
+    // some variance to keep it from looking linear.
+    const start = Math.max(50, Math.round(agent.reputation * 0.45));
+    const out: number[] = [start];
+    for (let i = 1; i < points - 1; i++) {
+        const progress = i / (points - 1);
+        const target = start + (agent.reputation - start) * progress;
+        const jitter = (rand() - 0.45) * 80;
+        out.push(Math.max(0, Math.round(target + jitter)));
+    }
+    out.push(agent.reputation);
+    return out;
+}
 
 export const MOCK_DECISIONS: Decision[] = [
     {
