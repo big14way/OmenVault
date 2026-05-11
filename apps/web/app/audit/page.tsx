@@ -96,7 +96,7 @@ export default function AuditPage() {
     );
 
     return (
-        <main className="relative pb-24">
+        <main className="relative flex-1 flex flex-col pb-24">
             <LedgerHeader decisionCount={MOCK_DECISIONS.length} />
 
             {/* Filter band — sticky on long scroll */}
@@ -108,8 +108,10 @@ export default function AuditPage() {
                 />
             </div>
 
-            {/* Result count + ledger */}
-            <div className="max-w-[1440px] mx-auto px-6 md:px-10 pt-6">
+            {/* Result count + ledger — flex-1 absorbs viewport slack so the
+                ledger frame extends to the footer instead of leaving a
+                dead-air gap. */}
+            <div className="max-w-[1440px] mx-auto w-full px-6 md:px-10 pt-6 flex-1 flex flex-col">
                 <div className="flex items-baseline justify-between mb-3 font-mono text-[11px] uppercase tracking-eyebrow text-fg-mute tabular">
                     <span>
                         <span className="text-bone">{filtered.length}</span>{" "}
@@ -130,7 +132,7 @@ export default function AuditPage() {
                 {filtered.length === 0 ? (
                     <EmptyState />
                 ) : (
-                    <div className="border border-border bg-night">
+                    <div className="border border-border bg-night flex-1 flex flex-col">
                         {filtered.map((d) => (
                             <LedgerRow
                                 key={d.id}
@@ -138,6 +140,19 @@ export default function AuditPage() {
                                 onOpen={() => setOpenDecision(d)}
                             />
                         ))}
+                        {/* Bottom filler — keeps the frame extending to the
+                            footer when content is shorter than viewport.
+                            Shows a faint repeating ledger-paper texture so the
+                            empty area reads as "ruled paper continuing", not
+                            "missing content". */}
+                        <div
+                            className="flex-1 min-h-[80px]"
+                            style={{
+                                backgroundImage:
+                                    "repeating-linear-gradient(0deg, transparent 0 47px, rgba(232, 229, 221, 0.025) 47px 48px)",
+                            }}
+                            aria-hidden
+                        />
                     </div>
                 )}
             </div>
