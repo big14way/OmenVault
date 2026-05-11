@@ -92,12 +92,15 @@ export function NewMarketForm({state, onChange}: FormProps) {
         e.preventDefault();
         if (!isValid) return;
         setSubmitting(true);
-        const mockId = String(Math.floor(Math.random() * 9000) + 8);
         toast("Market deployment queued", {
-            description: `Approve via wallet · 2 txs (factory + vault). Redirecting to /markets/${mockId}…`,
+            description:
+                "2 txs · MarketFactory.createMarket + CollateralVault.init. Will appear in /markets once block-confirmed. Wallet wiring pending — this is a mock.",
+            duration: 6000,
         });
-        // Simulate latency before redirect.
-        setTimeout(() => router.push(`/markets/${mockId}`), 1500);
+        // Redirect to the markets list — user lands somewhere useful while
+        // they wait for the (mock) deployment. Real flow goes to /markets/[newId]
+        // once the factory emits MarketCreated and we have the id.
+        setTimeout(() => router.push("/markets"), 1200);
     };
 
     return (
