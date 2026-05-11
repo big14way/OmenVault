@@ -4,21 +4,28 @@ import {useMemo, useState} from "react";
 import {motion} from "framer-motion";
 import {ArrowRight, Info, Wallet} from "@phosphor-icons/react/dist/ssr";
 import {toast} from "sonner";
+import {useAccount, useConnect} from "wagmi";
+import {isAddress} from "viem";
 import {Button} from "@/components/primitives/button";
 import {cn} from "@/lib/cn";
 import {formatUsdt0, formatPercent, timeUntil} from "@/lib/format";
 import {TIER_APY, type Market} from "@/lib/types";
+import {useEnter} from "@/lib/web3/hooks/use-enter";
 
 interface PositionFormProps {
     market: Market;
+    /// @deprecated wallet state is now derived from wagmi; kept for back-compat with callers
     walletConnected?: boolean;
 }
 
 const QUICK = [25, 100, 500, 1500];
 
-export function PositionForm({market, walletConnected = false}: PositionFormProps) {
+export function PositionForm({market}: PositionFormProps) {
     const [side, setSide] = useState<"YES" | "NO">("YES");
     const [amount, setAmount] = useState<number>(100);
+    const {isConnected} = useAccount();
+    const {connect, connectors} = useConnect();
+    const enterMutation = useEnter();
 
     const apy = TIER_APY[market.tier];
     const price = side === "YES" ? market.yesPrice : market.noPrice;
@@ -29,17 +36,39 @@ export function PositionForm({market, walletConnected = false}: PositionFormProp
     );
     const projectedYield = (apy * daysUntilResolve) / 365;
 
-    const handleSubmit = () => {
-        if (!walletConnected) {
-            toast("Connect wallet first", {
-                description:
-                    "Mantle Sepolia · MetaMask, Rainbow, or any WalletConnect wallet.",
+    const handleSubmit = async () => {
+        if (!isConnected) {
+            const injected = connectors.find((c) => c.id === "injected") ?? connectors[0];
+            if (injected) connect({connector: injected});
+            else toast("No wallet detected", {description: "Install MetaMask or another injected wallet."});
+            return;
+        }
+        if (!isAddress(market.address)) {
+            toast("Mock market", {
+                description: "This market is seeded design data. Create or open a real on-chain market.",
             });
             return;
         }
-        toast("Position queued", {
-            description: `Approving ${formatUsdt0(amount)} USDT0 → entering ${side} on Mkt #${market.id}`,
-        });
+        try {
+            toast.loading(`Approving ${formatUsdt0(amount)} USDT0 then entering ${side}…`, {id: "enter"});
+            const sideId = side === "YES" ? 0 : 1;
+            // USDT0 has 6 decimals.
+            const amountUsdt0 = BigInt(Math.round(amount * 1_000_000));
+            await enterMutation.mutateAsync({
+                market: market.address as `0x${string}`,
+                side: sideId,
+                amountUsdt0,
+            });
+            toast.success("Position taken", {
+                id: "enter",
+                description: `Entered ${side} on Mkt ${market.id.slice(0, 8)}…`,
+            });
+        } catch (err: any) {
+            toast.error("Entry failed", {
+                id: "enter",
+                description: err?.shortMessage ?? err?.message?.slice(0, 80) ?? "unknown error",
+            });
+        }
     };
 
     return (
@@ -157,8 +186,11 @@ export function PositionForm({market, walletConnected = false}: PositionFormProp
                     variant={side === "YES" ? "yes" : "no"}
                     className="w-full"
                     onClick={handleSubmit}
+                    disabled={enterMutation.isPending}
                 >
-                    {walletConnected ? (
+                    {enterMutation.isPending ? (
+                        <>Working…</>
+                    ) : isConnected ? (
                         <>
                             Approve & enter {side}
                             <ArrowRight size={14} weight="regular" />

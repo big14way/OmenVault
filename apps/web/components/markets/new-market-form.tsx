@@ -4,9 +4,13 @@ import {useState} from "react";
 import {useRouter} from "next/navigation";
 import {toast} from "sonner";
 import {ArrowRight, Check, Warning} from "@phosphor-icons/react/dist/ssr";
+import {useAccount, useConnect} from "wagmi";
+import {pad, toHex} from "viem";
 import {Button} from "@/components/primitives/button";
 import {TIER_APY, type CollateralTier, type Market} from "@/lib/types";
 import {cn} from "@/lib/cn";
+import {useCreateMarket} from "@/lib/web3/hooks/use-create-market";
+import {deployment} from "@/lib/web3/config";
 
 export type Template = "crypto" | "custom";
 export type Direction = "above" | "below";
@@ -71,6 +75,9 @@ interface FormProps {
 export function NewMarketForm({state, onChange}: FormProps) {
     const [submitting, setSubmitting] = useState(false);
     const router = useRouter();
+    const {isConnected} = useAccount();
+    const {connect, connectors} = useConnect();
+    const createMutation = useCreateMarket();
 
     const update = <K extends keyof DraftState>(key: K, value: DraftState[K]) =>
         onChange({...state, [key]: value});
@@ -88,19 +95,60 @@ export function NewMarketForm({state, onChange}: FormProps) {
     );
     const projYield = (TIER_APY[state.tier] * daysToResolve) / 365;
 
-    const onSubmit = (e: React.FormEvent) => {
+    const tierToId = (t: CollateralTier): 0 | 1 | 2 =>
+        t === "sUSDe" ? 2 : t === "USDY" ? 1 : 0;
+
+    const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!isValid) return;
+        if (!isValid || submitting) return;
+
+        // Pre-deploy / no wallet — keep the mock flow so design demos still work.
+        if (!deployment.marketFactory) {
+            toast("MarketFactory not configured", {
+                description:
+                    "Set NEXT_PUBLIC_MARKET_FACTORY_ADDRESS in .env. Skipping write — redirecting.",
+                duration: 5000,
+            });
+            setTimeout(() => router.push("/markets"), 800);
+            return;
+        }
+
+        if (!isConnected) {
+            const injected = connectors.find((c) => c.id === "injected") ?? connectors[0];
+            if (injected) connect({connector: injected});
+            else toast("No wallet detected", {description: "Install MetaMask or an injected wallet."});
+            return;
+        }
+
         setSubmitting(true);
-        toast("Market deployment queued", {
-            description:
-                "2 txs · MarketFactory.createMarket + CollateralVault.init. Will appear in /markets once block-confirmed. Wallet wiring pending — this is a mock.",
-            duration: 6000,
-        });
-        // Redirect to the markets list — user lands somewhere useful while
-        // they wait for the (mock) deployment. Real flow goes to /markets/[newId]
-        // once the factory emits MarketCreated and we have the id.
-        setTimeout(() => router.push("/markets"), 1200);
+        try {
+            toast.loading("Submitting createMarket…", {id: "create"});
+            // alloraTopicId is a bytes32; pad the numeric topic id from the picker.
+            const topicId = state.alloraTopicId
+                ? (pad(toHex(BigInt(state.alloraTopicId)), {size: 32}) as `0x${string}`)
+                : (`0x${"00".repeat(32)}` as `0x${string}`);
+
+            const newMarket = await createMutation.mutateAsync({
+                question: deriveQuestion(state),
+                resolutionAt: BigInt(Math.floor(state.resolutionAt / 1000)),
+                alloraTopicId: topicId,
+                collateralTier: tierToId(state.tier),
+                minStakeBps: Math.max(1, Math.floor(state.minStakeUsdt0)),
+                liquidityB: BigInt(Math.floor(state.liquidityB)) * 10n ** 18n,
+            });
+
+            toast.success("Market deployed", {
+                id: "create",
+                description: `Mkt ${newMarket.slice(0, 10)}… — opening`,
+            });
+            router.push(`/markets/${newMarket}`);
+        } catch (err: any) {
+            toast.error("Create failed", {
+                id: "create",
+                description: err?.shortMessage ?? err?.message?.slice(0, 80) ?? "unknown error",
+            });
+            setSubmitting(false);
+        }
     };
 
     return (

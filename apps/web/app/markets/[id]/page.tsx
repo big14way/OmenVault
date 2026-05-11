@@ -18,6 +18,8 @@ import {
     MOCK_POSITIONS,
 } from "@/lib/mock-data";
 import {TIER_APY} from "@/lib/types";
+import {useMarket} from "@/lib/web3/hooks/use-market";
+import {usePosition} from "@/lib/web3/hooks/use-position";
 import {
     formatDateLong,
     formatPercent,
@@ -29,7 +31,12 @@ import {cn} from "@/lib/cn";
 
 export default function MarketDetailPage() {
     const params = useParams<{id: string}>();
-    const market = findMarket(params.id);
+    const id = params.id;
+    // Try on-chain first; fall back to mocks for the seeded design-time IDs.
+    const {data: onChainMarket} = useMarket(id);
+    const market = onChainMarket ?? findMarket(id);
+    const {data: onChainPosition} = usePosition(id);
+
     const [tab, setTab] = useState<"activity" | "stats" | "allora" | "nansen">("activity");
 
     if (!market) {
@@ -38,7 +45,8 @@ export default function MarketDetailPage() {
 
     const decisions = decisionsForMarket(market.id);
     const oracleVotes = MOCK_ORACLE_VOTES[market.id] ?? [];
-    const myPosition = MOCK_POSITIONS.find((p) => p.marketId === market.id);
+    const myPosition =
+        onChainPosition ?? MOCK_POSITIONS.find((p) => p.marketId === market.id);
     const apy = TIER_APY[market.tier];
 
     return (
