@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import {ArrowRight} from "@phosphor-icons/react/dist/ssr";
 import {MarketCard} from "@/components/markets/market-card";
 import {MOCK_MARKETS} from "@/lib/mock-data";
+import {useMarkets} from "@/lib/web3/hooks/use-markets";
 
 export function FeaturedMarkets() {
-    const featured = MOCK_MARKETS.filter((m) => m.status === "active").slice(0, 3);
+    const {data: onChain} = useMarkets();
+    const source = (onChain?.length ?? 0) > 0 ? onChain! : MOCK_MARKETS;
+    const featured = source.filter((m) => m.status === "active").slice(0, 3);
 
     return (
         <section className="relative py-24 md:py-32 bg-night-deep border-y border-border">

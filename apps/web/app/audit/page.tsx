@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useMemo, useState} from "react";
+import {Suspense, useEffect, useMemo, useState} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {LedgerHeader} from "@/components/audit/ledger-header";
 import {
@@ -14,6 +14,9 @@ import {LedgerRow} from "@/components/audit/ledger-row";
 import {LedgerDrawer} from "@/components/audit/ledger-drawer";
 import {MOCK_DECISIONS, MOCK_MARKETS} from "@/lib/mock-data";
 import type {Decision} from "@/lib/types";
+import {useDecisions} from "@/lib/web3/hooks/use-decisions";
+import {useMarkets} from "@/lib/web3/hooks/use-markets";
+import {deployment} from "@/lib/web3/config";
 
 const TYPES: LedgerType[] = ["all", "trader", "oracle", "bettor", "system"];
 const KINDS: LedgerKind[] = ["all", "enter", "exit", "vote", "finalize", "claim", "create"];
@@ -45,6 +48,15 @@ function matchesType(d: Decision, t: LedgerType) {
 }
 
 export default function AuditPage() {
+    // useSearchParams() forces this page out of static prerender unless wrapped.
+    return (
+        <Suspense fallback={null}>
+            <AuditPageInner />
+        </Suspense>
+    );
+}
+
+function AuditPageInner() {
     const router = useRouter();
     const params = useSearchParams();
 
@@ -64,6 +76,13 @@ export default function AuditPage() {
     const [filters, setFilters] = useState<LedgerFilterState>(initial);
     const [openDecision, setOpenDecision] = useState<Decision | null>(null);
 
+    // Real events if the DecisionLog has any; else seeded mocks for design-time browsing.
+    const {data: onChainDecisions} = useDecisions();
+    const {data: onChainMarkets} = useMarkets();
+    const usingChain = Boolean(deployment.decisionLog) && (onChainDecisions?.length ?? 0) > 0;
+    const decisions = usingChain ? onChainDecisions! : MOCK_DECISIONS;
+    const marketSource = (onChainMarkets?.length ?? 0) > 0 ? onChainMarkets! : MOCK_MARKETS;
+
     // Sync filter state to URL params (shareable links)
     useEffect(() => {
         const sp = new URLSearchParams();
@@ -78,26 +97,26 @@ export default function AuditPage() {
     const filtered = useMemo(() => {
         const now = Date.now();
         const rangeWindow = RANGE_MS[filters.range];
-        return MOCK_DECISIONS.filter((d) => {
+        return decisions.filter((d) => {
             if (!matchesType(d, filters.type)) return false;
             if (filters.kind !== "all" && d.kind !== KIND_MAP[filters.kind]) return false;
             if (filters.market !== "all" && d.marketId !== filters.market) return false;
             if (rangeWindow !== null && now - d.timestamp > rangeWindow) return false;
             return true;
         }).sort((a, b) => b.timestamp - a.timestamp);
-    }, [filters]);
+    }, [filters, decisions]);
 
     const markets = useMemo(
         () =>
-            MOCK_MARKETS.map((m) => ({id: m.id, label: `mkt-${m.id.padStart(3, "0")}`})).sort(
-                (a, b) => parseInt(a.id) - parseInt(b.id)
-            ),
-        []
+            marketSource
+                .map((m) => ({id: m.id, label: m.id.length > 8 ? `mkt-${m.id.slice(2, 8)}` : `mkt-${m.id.padStart(3, "0")}`}))
+                .sort((a, b) => a.id.localeCompare(b.id)),
+        [marketSource]
     );
 
     return (
         <main className="relative flex-1 flex flex-col pb-24">
-            <LedgerHeader decisionCount={MOCK_DECISIONS.length} />
+            <LedgerHeader decisionCount={decisions.length} />
 
             {/* Filter band — sticky on long scroll */}
             <div className="sticky top-16 z-30">
@@ -117,7 +136,7 @@ export default function AuditPage() {
                         <span className="text-bone">{filtered.length}</span>{" "}
                         {filtered.length === 1 ? "result" : "results"}
                     </span>
-                    {filtered.length !== MOCK_DECISIONS.length && (
+                    {filtered.length !== decisions.length && (
                         <button
                             onClick={() =>
                                 setFilters({type: "all", kind: "all", market: "all", range: "all"})

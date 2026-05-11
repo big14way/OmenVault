@@ -10,6 +10,8 @@ import {
 } from "@/components/agents/agent-roster-filters";
 import {MOCK_AGENTS, MOCK_DECISIONS} from "@/lib/mock-data";
 import type {Agent} from "@/lib/types";
+import {useAgents} from "@/lib/web3/hooks/use-agents";
+import {deployment} from "@/lib/web3/config";
 
 const TYPE_MATCH: Record<RosterType, (a: Agent) => boolean> = {
     all: () => true,
@@ -35,22 +37,26 @@ export default function AgentsRegistryPage() {
     const [type, setType] = useState<RosterType>("all");
     const [sort, setSort] = useState<RosterSort>("rep");
 
+    const {data: onChainAgents} = useAgents();
+    const usingChain = Boolean(deployment.agentRegistry) && (onChainAgents?.length ?? 0) > 0;
+    const agents = usingChain ? onChainAgents! : MOCK_AGENTS;
+
     const counts: Record<RosterType, number> = useMemo(
         () => ({
-            all: MOCK_AGENTS.length,
-            trader: MOCK_AGENTS.filter((a) => a.type === "Trader").length,
-            oracle: MOCK_AGENTS.filter((a) => a.type === "OracleNode").length,
-            bettor: MOCK_AGENTS.filter((a) => a.type === "Bettor").length,
+            all: agents.length,
+            trader: agents.filter((a) => a.type === "Trader").length,
+            oracle: agents.filter((a) => a.type === "OracleNode").length,
+            bettor: agents.filter((a) => a.type === "Bettor").length,
         }),
-        []
+        [agents]
     );
 
     // Spotlight = highest-reputation Trader (the most likely demo focus)
     const spotlight = useMemo(() => {
-        return MOCK_AGENTS.filter((a) => a.type === "Trader").sort(
+        return agents.filter((a) => a.type === "Trader").sort(
             (a, b) => b.reputation - a.reputation
         )[0];
-    }, []);
+    }, [agents]);
 
     const spotlightDecisions = useMemo(
         () => (spotlight ? decisionsFor(spotlight.id) : []),
@@ -67,16 +73,16 @@ export default function AgentsRegistryPage() {
     );
 
     const roster = useMemo(() => {
-        const xs = MOCK_AGENTS.filter(TYPE_MATCH[type])
+        const xs = agents.filter(TYPE_MATCH[type])
             // Exclude the spotlight when "all" or "trader" is selected — already shown above
             .filter((a) => !(spotlight && a.id === spotlight.id && (type === "all" || type === "trader")));
         xs.sort(SORTERS[sort]);
         return xs;
-    }, [type, sort, spotlight]);
+    }, [agents, type, sort, spotlight]);
 
     const activeNow = useMemo(
-        () => MOCK_AGENTS.filter((a) => Date.now() - a.lastActionAt < 30 * 60_000).length,
-        []
+        () => agents.filter((a) => Date.now() - a.lastActionAt < 30 * 60_000).length,
+        [agents]
     );
 
     return (
@@ -88,7 +94,7 @@ export default function AgentsRegistryPage() {
                         Agents
                     </h1>
                     <p className="mt-4 font-mono text-[13px] text-fg-mute tabular">
-                        <span className="text-bone">{MOCK_AGENTS.length}</span> registered ·{" "}
+                        <span className="text-bone">{agents.length}</span> registered ·{" "}
                         <span className="text-amber">{activeNow}</span> active in last 30m · ERC-8004
                         soulbound
                     </p>

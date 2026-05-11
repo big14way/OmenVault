@@ -10,6 +10,7 @@ import {findAgent, MOCK_DECISIONS, MOCK_MARKETS} from "@/lib/mock-data";
 import {formatUsdt0} from "@/lib/format";
 import {cn} from "@/lib/cn";
 import type {Decision, Market} from "@/lib/types";
+import {useAgents} from "@/lib/web3/hooks/use-agents";
 
 function decisionsFor(agentId: number): Decision[] {
     return MOCK_DECISIONS.filter((d) => d.agentId === agentId).sort(
@@ -20,7 +21,9 @@ function decisionsFor(agentId: number): Decision[] {
 export default function AgentProfilePage() {
     const params = useParams<{id: string}>();
     const agentId = parseInt(params.id, 10);
-    const agent = findAgent(agentId);
+    const {data: onChainAgents} = useAgents();
+    const agent =
+        onChainAgents?.find((a) => a.id === agentId) ?? findAgent(agentId);
 
     if (!agent || isNaN(agentId)) {
         notFound();
