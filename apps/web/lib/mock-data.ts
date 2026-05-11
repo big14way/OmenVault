@@ -199,7 +199,111 @@ export const MOCK_AGENTS: Agent[] = [
         lastActionAt: now - 36 * 60_000,
         createdAt: now - 22 * day,
     },
+    ...generateAgentRoster(),
 ];
+
+// Procedural roster fill. Hand-curated agents above are the ones referenced
+// in MOCK_DECISIONS and the demo flow. These extras give /agents/registry
+// a populated feel without needing to wire each into the activity stream.
+function generateAgentRoster(): Agent[] {
+    const traderSeeds: {id: number; rep: number; wr: number; cap: number; daysAgo: number; lastMin: number}[] = [
+        {id: 12, rep: 640, wr: 0.66, cap: 3_200, daysAgo: 38, lastMin: 8},
+        {id: 19, rep: 590, wr: 0.61, cap: 2_700, daysAgo: 31, lastMin: 23},
+        {id: 23, rep: 480, wr: 0.55, cap: 1_400, daysAgo: 26, lastMin: 110},
+        {id: 26, rep: 690, wr: 0.69, cap: 2_900, daysAgo: 41, lastMin: 4},
+        {id: 31, rep: 350, wr: 0.49, cap: 980, daysAgo: 18, lastMin: 220},
+        {id: 38, rep: 560, wr: 0.58, cap: 1_800, daysAgo: 29, lastMin: 60},
+        {id: 51, rep: 290, wr: 0.46, cap: 720, daysAgo: 15, lastMin: 340},
+        {id: 64, rep: 470, wr: 0.54, cap: 1_650, daysAgo: 24, lastMin: 180},
+        {id: 71, rep: 620, wr: 0.63, cap: 2_400, daysAgo: 33, lastMin: 47},
+        {id: 79, rep: 380, wr: 0.50, cap: 1_100, daysAgo: 20, lastMin: 95},
+    ];
+
+    const oracleSeeds: {id: number; rep: number; maj: number; daysAgo: number; lastHours: number}[] = [
+        {id: 11, rep: 810, maj: 0.88, daysAgo: 75, lastHours: 4},
+        {id: 13, rep: 720, maj: 0.81, daysAgo: 60, lastHours: 9},
+        {id: 14, rep: 690, maj: 0.79, daysAgo: 60, lastHours: 9},
+        {id: 21, rep: 540, maj: 0.71, daysAgo: 42, lastHours: 18},
+        {id: 22, rep: 480, maj: 0.68, daysAgo: 42, lastHours: 21},
+    ];
+
+    const bettorSeeds: {id: number; cap: number; daysAgo: number; lastHours: number}[] = [
+        {id: 104, cap: 420, daysAgo: 12, lastHours: 3},
+        {id: 109, cap: 1_120, daysAgo: 19, lastHours: 7},
+        {id: 116, cap: 280, daysAgo: 8, lastHours: 12},
+        {id: 124, cap: 1_640, daysAgo: 26, lastHours: 2},
+        {id: 138, cap: 540, daysAgo: 11, lastHours: 5},
+        {id: 152, cap: 90, daysAgo: 5, lastHours: 22},
+        {id: 167, cap: 2_240, daysAgo: 30, lastHours: 1},
+        {id: 181, cap: 730, daysAgo: 17, lastHours: 14},
+    ];
+
+    const owner = (seed: number) =>
+        "0x" + (seed * 0x9e3779b1).toString(16).padStart(8, "0").repeat(5).slice(0, 40);
+
+    const xs: Agent[] = [];
+    traderSeeds.forEach((s) => {
+        xs.push({
+            id: s.id,
+            type: "Trader",
+            owner: owner(s.id * 7),
+            reputation: s.rep,
+            winRate: s.wr,
+            capitalDeployed: s.cap,
+            lastActionAt: now - s.lastMin * 60_000,
+            createdAt: now - s.daysAgo * day,
+        });
+    });
+    oracleSeeds.forEach((s) => {
+        xs.push({
+            id: s.id,
+            type: "OracleNode",
+            owner: owner(s.id * 11),
+            reputation: s.rep,
+            majorityAlignment: s.maj,
+            lastActionAt: now - s.lastHours * 3_600_000,
+            createdAt: now - s.daysAgo * day,
+        });
+    });
+    bettorSeeds.forEach((s) => {
+        xs.push({
+            id: s.id,
+            type: "Bettor",
+            owner: owner(s.id * 13),
+            reputation: 0,
+            capitalDeployed: s.cap,
+            lastActionAt: now - s.lastHours * 3_600_000,
+            createdAt: now - s.daysAgo * day,
+        });
+    });
+    return xs;
+}
+
+// Deterministic reputation history for sparklines. Seeded by agent id so
+// the chart is stable across renders and the same agent always shows the
+// same trajectory.
+export function reputationHistoryFor(agent: Agent, points = 24): number[] {
+    let s = (agent.id * 0x9e3779b1 + 0x12345) >>> 0;
+    const rand = () => {
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    // Random walk from a low starting reputation to the current one, with
+    // some variance to keep it from looking linear.
+    const start = Math.max(50, Math.round(agent.reputation * 0.45));
+    const out: number[] = [start];
+    for (let i = 1; i < points - 1; i++) {
+        const progress = i / (points - 1);
+        const target = start + (agent.reputation - start) * progress;
+        const jitter = (rand() - 0.45) * 80;
+        out.push(Math.max(0, Math.round(target + jitter)));
+    }
+    out.push(agent.reputation);
+    return out;
+}
 
 export const MOCK_DECISIONS: Decision[] = [
     {
@@ -337,7 +441,186 @@ export const MOCK_DECISIONS: Decision[] = [
         payload: {},
         txHash: "0x293a4b5c6d7e8f9012345678abcdef1234567890abcdef123456789012345678",
     },
+    ...generateLedgerHistory(),
 ];
+
+// Procedural ledger fill for /audit density. Hand-curated entries above carry
+// the demo-critical reasoning blobs; these are background activity that makes
+// the ledger feel like a real running protocol rather than a 9-row toy.
+function generateLedgerHistory(): Decision[] {
+    const minute = 60_000;
+    const hour = 60 * minute;
+
+    const traderShort = [
+        "Allora at 58%, market at 0.52. Modest edge, sizing small.",
+        "Allora 71% YES, three smart-money wallets long. Comfortable entry.",
+        "Forecast and price drifted within 1%. Passing this cycle.",
+        "Tail-risk; sizing 5% of vault on the contrarian.",
+        "Smart-money flipped sides overnight. Closing the position next cycle.",
+        "Edge expanded after the latest Allora poll. Adding to position.",
+        "Vault cap reached on YES. Holding.",
+    ];
+
+    const oracleSources: [string, string][] = [
+        ["CoinGecko", "Binance"],
+        ["Kraken", "Coinbase"],
+        ["Cryptocompare", "Pyth"],
+        ["Bitstamp", "Binance"],
+        ["Gemini", "Coinbase"],
+    ];
+
+    const txFor = (seed: number) => {
+        const hex = (seed * 0x9e3779b1).toString(16).padStart(8, "0");
+        const blocks = [hex, hex.split("").reverse().join(""), hex, hex.split("").reverse().join("")];
+        return "0x" + blocks.join("").slice(0, 64);
+    };
+
+    const items: Decision[] = [];
+    let id = 10;
+    const traders = [42, 17, 88, 26, 31, 64];
+    const oracles = [7, 8, 9];
+    const bettors = [103, 211, 318, 442, 519];
+    const markets = ["7", "5", "4", "3", "6"];
+
+    // Spread across last 72 hours with a slight bias toward recent
+    const ts = (h: number, m = 0) => now - h * hour - m * minute;
+
+    // Recent traders
+    const traderTrace: {h: number; m: number; t: number; market: string; side: "YES" | "NO"; price: number; amt: number; reason: string; allora: number; nansen: number; conf: number}[] = [
+        {h: 0, m: 7, t: 42, market: "7", side: "YES", price: 0.62, amt: 800, reason: traderShort[5], allora: 0.65, nansen: 3, conf: 0.74},
+        {h: 0, m: 21, t: 26, market: "5", side: "YES", price: 0.7, amt: 350, reason: traderShort[1], allora: 0.71, nansen: 2, conf: 0.68},
+        {h: 0, m: 41, t: 88, market: "3", side: "NO", price: 0.82, amt: 250, reason: traderShort[3], allora: 0.22, nansen: 0, conf: 0.49},
+        {h: 1, m: 8, t: 17, market: "4", side: "YES", price: 0.34, amt: 420, reason: traderShort[0], allora: 0.38, nansen: 1, conf: 0.55},
+        {h: 1, m: 32, t: 31, market: "6", side: "YES", price: 0.54, amt: 180, reason: traderShort[0], allora: 0.57, nansen: 0, conf: 0.5},
+        {h: 2, m: 18, t: 42, market: "7", side: "YES", price: 0.6, amt: 1200, reason: traderShort[5], allora: 0.63, nansen: 3, conf: 0.71},
+        {h: 3, m: 4, t: 64, market: "4", side: "NO", price: 0.67, amt: 700, reason: traderShort[3], allora: 0.29, nansen: 1, conf: 0.58},
+        {h: 4, m: 22, t: 26, market: "5", side: "YES", price: 0.69, amt: 500, reason: traderShort[1], allora: 0.7, nansen: 2, conf: 0.66},
+        {h: 6, m: 47, t: 17, market: "7", side: "YES", price: 0.58, amt: 220, reason: traderShort[0], allora: 0.6, nansen: 2, conf: 0.54},
+        {h: 9, m: 12, t: 31, market: "6", side: "NO", price: 0.46, amt: 95, reason: traderShort[2], allora: 0.5, nansen: 0, conf: 0.48},
+        {h: 12, m: 33, t: 42, market: "7", side: "YES", price: 0.55, amt: 1500, reason: traderShort[1], allora: 0.62, nansen: 3, conf: 0.78},
+        {h: 18, m: 4, t: 88, market: "5", side: "NO", price: 0.32, amt: 600, reason: traderShort[3], allora: 0.28, nansen: 0, conf: 0.52},
+        {h: 24, m: 19, t: 26, market: "4", side: "YES", price: 0.36, amt: 340, reason: traderShort[0], allora: 0.4, nansen: 1, conf: 0.56},
+        {h: 36, m: 8, t: 17, market: "7", side: "YES", price: 0.51, amt: 280, reason: traderShort[0], allora: 0.55, nansen: 1, conf: 0.52},
+        {h: 48, m: 41, t: 42, market: "5", side: "YES", price: 0.68, amt: 950, reason: traderShort[1], allora: 0.7, nansen: 2, conf: 0.68},
+    ];
+    traderTrace.forEach((d, i) => {
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.t,
+            agentType: "Trader",
+            kind: "ENTER",
+            marketId: d.market,
+            payload: {
+                side: d.side,
+                amount: d.amt,
+                price: d.price,
+                ipfsHash: `QmTrader${d.t}-${i}`,
+                reasoning: d.reason,
+                alloraForecast: d.allora,
+                nansenWallets: d.nansen,
+                confidence: d.conf,
+            },
+            txHash: txFor(id),
+        });
+    });
+
+    // Bettor entries
+    const bettorTrace: {h: number; m: number; b: number; market: string; side: "YES" | "NO"; price: number; amt: number}[] = [
+        {h: 0, m: 3, b: 103, market: "7", side: "NO", price: 0.45, amt: 50},
+        {h: 0, m: 33, b: 211, market: "5", side: "YES", price: 0.7, amt: 120},
+        {h: 1, m: 18, b: 318, market: "7", side: "YES", price: 0.6, amt: 220},
+        {h: 2, m: 50, b: 442, market: "4", side: "NO", price: 0.66, amt: 90},
+        {h: 5, m: 22, b: 519, market: "6", side: "YES", price: 0.55, amt: 410},
+        {h: 11, m: 7, b: 103, market: "5", side: "YES", price: 0.68, amt: 180},
+        {h: 20, m: 39, b: 211, market: "3", side: "NO", price: 0.83, amt: 75},
+        {h: 30, m: 14, b: 318, market: "7", side: "YES", price: 0.53, amt: 60},
+    ];
+    bettorTrace.forEach((d) => {
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.b,
+            agentType: "Bettor",
+            kind: "ENTER",
+            marketId: d.market,
+            payload: {side: d.side, amount: d.amt, price: d.price},
+            txHash: txFor(id),
+        });
+    });
+
+    // Oracle votes (other markets, not just the resolving one in hand-curated list)
+    const oracleTrace: {h: number; m: number; o: number; market: string; outcome: "YES" | "NO" | "INVALID"; sources: [string, string]; reasoning: string}[] = [
+        {h: 14, m: 22, o: 7, market: "1", outcome: "YES", sources: oracleSources[0], reasoning: "CPI print confirmed at 2.3% YoY. Threshold of 2.5% cleared with margin."},
+        {h: 14, m: 24, o: 8, market: "1", outcome: "YES", sources: oracleSources[1], reasoning: "BLS release matches CoinGecko parsing. Confirmed YES."},
+        {h: 14, m: 28, o: 9, market: "1", outcome: "YES", sources: oracleSources[2], reasoning: "BLS direct. Final reading 2.3%. Confirmed."},
+        {h: 14, m: 32, o: 0, market: "1", outcome: "YES", sources: ["system", "system"], reasoning: ""},
+    ];
+    oracleTrace.forEach((d) => {
+        const kind: "VOTE" | "FINALIZE" = d.o === 0 ? "FINALIZE" : "VOTE";
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.o,
+            agentType: d.o === 0 ? "System" : "OracleNode",
+            kind,
+            marketId: d.market,
+            payload: kind === "VOTE"
+                ? {
+                      outcome: d.outcome,
+                      ipfsHash: `QmOracle${d.o}-${d.market}`,
+                      reasoning: d.reasoning,
+                      sources: d.sources,
+                  }
+                : {outcome: d.outcome},
+            txHash: txFor(id),
+        });
+    });
+
+    // Claims after the resolved market (id=1)
+    const claimTrace: {h: number; m: number; b: number}[] = [
+        {h: 13, m: 4, b: 103},
+        {h: 13, m: 22, b: 211},
+        {h: 14, m: 5, b: 442},
+        {h: 19, m: 38, b: 318},
+    ];
+    claimTrace.forEach((d) => {
+        items.push({
+            id: `d-${(id++).toString().padStart(3, "0")}`,
+            timestamp: ts(d.h, d.m),
+            agentId: d.b,
+            agentType: "Bettor",
+            kind: "CLAIM",
+            marketId: "1",
+            payload: {},
+            txHash: txFor(id),
+        });
+    });
+
+    // Older market creations
+    items.push({
+        id: `d-${(id++).toString().padStart(3, "0")}`,
+        timestamp: now - 12 * day,
+        agentId: 0,
+        agentType: "System",
+        kind: "CREATE_MARKET",
+        marketId: "5",
+        payload: {},
+        txHash: txFor(id),
+    });
+    items.push({
+        id: `d-${(id++).toString().padStart(3, "0")}`,
+        timestamp: now - 28 * day,
+        agentId: 0,
+        agentType: "System",
+        kind: "CREATE_MARKET",
+        marketId: "4",
+        payload: {},
+        txHash: txFor(id),
+    });
+
+    return items;
+}
 
 export const MOCK_ORACLE_VOTES: Record<string, OracleVote[]> = {
     "2": [
