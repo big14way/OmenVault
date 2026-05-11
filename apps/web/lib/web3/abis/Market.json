@@ -1,0 +1,624 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "question_",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "resolutionAt_",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "alloraTopicId_",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "collateralTier_",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "minStakeBps_",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "liquidityB_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "usdt0_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "usdy_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "sUSDe_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "oracleSwarm_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "alloraConsumer_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "decisionLog_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "agentRegistry_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "agentRegistry",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract AgentRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "alloraConsumer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "alloraTopicId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claim",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "payout",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "collateralTier",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "collateralVault",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "currentPrice",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "yesPriceE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "noPriceE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "decisionLog",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "enter",
+    "inputs": [
+      {
+        "name": "side",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "amountUsdt0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "alloraSnapshot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "nansenSnapshot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "sharesMintedWad",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "liquidityB",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "minStakeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "noSharesWad",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "oracleSwarm",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "outcome",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum Market.Outcome"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "positions",
+    "inputs": [
+      {
+        "name": "bettor",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "agentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "yesSharesWad",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "noSharesWad",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "stakedUsdt0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "enteredAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "alloraSnapshot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "nansenSnapshot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "claimed",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "question",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "quoteShares",
+    "inputs": [
+      {
+        "name": "side",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "amountUsdt0",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "resolutionAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "resolve",
+    "inputs": [
+      {
+        "name": "finalOutcome",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolvedAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "totalStakedUsdt0",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "usdt0",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "yesSharesWad",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "Claimed",
+    "inputs": [
+      {
+        "name": "bettor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "usdt0Paid",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Entered",
+    "inputs": [
+      {
+        "name": "bettor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "side",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "uint8"
+      },
+      {
+        "name": "amountUsdt0",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "sharesMintedWad",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "alloraSnapshot",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "nansenSnapshot",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Resolved",
+    "inputs": [
+      {
+        "name": "outcome",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "at",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AddressEmptyCode",
+    "inputs": [
+      {
+        "name": "target",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AddressInsufficientBalance",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AlreadyClaimed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BelowMinStake",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedInnerCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSide",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LMSRBadInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MarketClosed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MarketNotResolved",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MarketResolved",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoWinningPosition",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotOracleSwarm",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultMissing",
+    "inputs": []
+  }
+]

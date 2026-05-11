@@ -42,8 +42,22 @@ contract DeployScript is Script {
             address(decisionLog)
         );
 
-        // Grant logging role to the deployer + downstream contracts that emit decisions.
+        // OracleSwarm bumps oracle reputation on each finalize.
         registry.grantRole(registry.REPUTATION_ROLE(), address(oracleSwarm));
+
+        // Trader / oracle bots write to DecisionLog. For now we give the role to the
+        // deployer so a follow-up `grant-roles` script can hand it to bot addresses,
+        // and to any pre-known bot addresses present in env (BOT_LOGGER_ADDRESS_1..N).
+        // Anyone with this role can append to the audit trail — never an admin role.
+        for (uint256 i = 1; i <= 8; i++) {
+            string memory key = string.concat("BOT_LOGGER_ADDRESS_", vm.toString(i));
+            try vm.envAddress(key) returns (address bot) {
+                if (bot != address(0)) {
+                    decisionLog.grantRole(decisionLog.LOGGER_ROLE(), bot);
+                    console.log("granted LOGGER_ROLE to %s", bot);
+                }
+            } catch {}
+        }
 
         vm.stopBroadcast();
 

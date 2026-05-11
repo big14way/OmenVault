@@ -4,6 +4,7 @@ import {GeistMono} from "geist/font/mono";
 import {Toaster} from "sonner";
 import {TopNav} from "@/components/chrome/top-nav";
 import {Footer} from "@/components/chrome/footer";
+import {Providers} from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,9 +32,11 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
                 />
             </head>
             <body className="font-sans antialiased bg-night text-bone min-h-screen flex flex-col">
-                <TopNav />
-                <div className="flex-1 flex flex-col">{children}</div>
-                <Footer />
+                <Providers>
+                    <TopNav />
+                    <div className="flex-1 flex flex-col">{children}</div>
+                    <Footer />
+                </Providers>
                 <Toaster
                     position="top-right"
                     theme="dark"

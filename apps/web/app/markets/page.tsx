@@ -11,6 +11,8 @@ import {
 } from "@/components/markets/markets-filter-bar";
 import {MarketsLiveRail} from "@/components/markets/markets-live-rail";
 import {MOCK_MARKETS} from "@/lib/mock-data";
+import {useMarkets} from "@/lib/web3/hooks/use-markets";
+import {deployment} from "@/lib/web3/config";
 
 export default function MarketsListPage() {
     const [filters, setFilters] = useState<MarketFilters>({
@@ -20,18 +22,24 @@ export default function MarketsListPage() {
         search: "",
     });
 
+    // Real markets if the factory is configured + the chain returns any; else mocks
+    // so the page still composes during pre-deploy frontend work.
+    const {data: onChainMarkets, isLoading} = useMarkets();
+    const usingChain = Boolean(deployment.marketFactory) && (onChainMarkets?.length ?? 0) > 0;
+    const markets = usingChain ? onChainMarkets! : MOCK_MARKETS;
+
     const counts = useMemo(
         () => ({
-            all: MOCK_MARKETS.length,
-            active: MOCK_MARKETS.filter((m) => m.status === "active").length,
-            resolving: MOCK_MARKETS.filter((m) => m.status === "resolving").length,
-            resolved: MOCK_MARKETS.filter((m) => m.status === "resolved").length,
+            all: markets.length,
+            active: markets.filter((m) => m.status === "active").length,
+            resolving: markets.filter((m) => m.status === "resolving").length,
+            resolved: markets.filter((m) => m.status === "resolved").length,
         }),
-        []
+        [markets]
     );
 
     const filtered = useMemo(() => {
-        let xs = MOCK_MARKETS.slice();
+        let xs = markets.slice();
         if (filters.status !== "all") xs = xs.filter((m) => m.status === filters.status);
         if (filters.tier !== "all") xs = xs.filter((m) => m.tier === filters.tier);
         if (filters.search.trim()) {
