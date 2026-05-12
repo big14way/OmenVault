@@ -109,42 +109,70 @@ async function main() {
     const factory = new ethers.Contract(ADDRS.factory, abis.MarketFactory as any, admin);
     const swarm = new ethers.Contract(ADDRS.swarm, abis.OracleSwarm as any, admin);
 
-    header("1. register agents");
-    // Type 1 = Trader, Type 2 = OracleNode, Type 0 = Bettor
-    await send(registry, "register", [1, aliceW.address, "ipfs://alice"]);
-    await send(registry, "register", [0, bobW.address, "ipfs://bob"]);
-    await send(registry, "register", [2, oracleAW.address, "ipfs://oracleA"]);
-    await send(registry, "register", [2, oracleBW.address, "ipfs://oracleB"]);
-    await send(registry, "register", [2, oracleCW.address, "ipfs://oracleC"]);
+    // Top up test wallets with gas on testnet (no-op on anvil where they already have ETH).
+    if (!RPC_URL.includes("localhost")) {
+        header("0. fund test wallets with gas");
+        // Tier-2 enter (USDT0->USDe->sUSDe) burns ~4M gas at 100 gwei = ~0.4 MNT.
+        // Budget 0.5 MNT per wallet so alice/bob can each do multiple txs.
+        const TOPUP = ethers.parseEther("0.5");
+        const MIN_KEEP = ethers.parseEther("0.4");
+        for (const w of [aliceW, bobW, oracleAW, oracleBW, oracleCW]) {
+            const bal = await provider.getBalance(w.address);
+            if (bal < MIN_KEEP) {
+                const nonce = await nextNonce(adminW.address);
+                const tx = await adminW.sendTransaction({to: w.address, value: TOPUP, nonce});
+                await tx.wait();
+                console.log(`funded ${w.address.slice(0, 10)} with 0.5 MNT`);
+            }
+        }
+    }
 
-    // Grant ORACLE_ROLE to each oracle wallet on the swarm.
+    header("1. register agents");
+    // Idempotent — skip any wallet already in the registry (smoke is rerun-friendly on testnet).
+    const registrations: [number, ethers.Wallet, string][] = [
+        [1, aliceW, "ipfs://alice"],       // Trader
+        [0, bobW, "ipfs://bob"],           // Bettor
+        [2, oracleAW, "ipfs://oracleA"],   // OracleNode
+        [2, oracleBW, "ipfs://oracleB"],
+        [2, oracleCW, "ipfs://oracleC"],
+    ];
+    for (const [kind, w, uri] of registrations) {
+        const existing: bigint = await registry.tokenIdOf(w.address);
+        if (existing === 0n) {
+            await send(registry, "register", [kind, w.address, uri]);
+        }
+    }
+
+    // Grant ORACLE_ROLE to each oracle wallet (idempotent — hasRole check).
     const ORACLE_ROLE = await swarm.ORACLE_ROLE();
-    await send(swarm, "grantRole", [ORACLE_ROLE, oracleAW.address]);
-    await send(swarm, "grantRole", [ORACLE_ROLE, oracleBW.address]);
-    await send(swarm, "grantRole", [ORACLE_ROLE, oracleCW.address]);
+    for (const w of [oracleAW, oracleBW, oracleCW]) {
+        const has: boolean = await swarm.hasRole(ORACLE_ROLE, w.address);
+        if (!has) {
+            await send(swarm, "grantRole", [ORACLE_ROLE, w.address]);
+        }
+    }
     console.log(`registered: alice=${aliceW.address.slice(0, 8)}, bob=${bobW.address.slice(0, 8)}, 3 oracles`);
 
     header("2. create market");
     const block = await provider.getBlock("latest");
     const now = block!.timestamp;
+    // Testnet txs land slowly; give the smoke flow room to enter before resolutionAt passes.
+    // Anvil time-warps later so the value barely matters there.
+    const isLocal = RPC_URL.includes("localhost");
+    const resolutionOffset = isLocal ? 60 : 24 * 3600; // 1 day on testnet so the market stays open
     const params = {
         question: "Will ETH close above $4500 on 2026-07-15?",
-        resolutionAt: now + 60, // 60 seconds for the smoke test
+        resolutionAt: now + resolutionOffset,
         alloraTopicId: ethers.zeroPadValue(ethers.toBeHex(14), 32),
         collateralTier: 2, // sUSDe ~12% APY
         minStakeBps: 0,
         liquidityB: 0n,
     };
-    const createRcpt = await send(factory, "createMarket", [params]);
-    const marketAddr = createRcpt!.logs
-        .map((l: any) => {
-            try {
-                return factory.interface.parseLog(l);
-            } catch {
-                return null;
-            }
-        })
-        .find((p: any) => p && p.name === "MarketCreated")!.args.market;
+    await send(factory, "createMarket", [params]);
+    // Read the address directly from the factory — receipt-log parsing can be
+    // brittle across RPC providers on Mantle Sepolia.
+    const newLen: bigint = await factory.marketsLength();
+    const marketAddr: string = await factory.allMarkets(newLen - 1n);
     console.log(`market deployed at ${marketAddr}`);
 
     const market = new ethers.Contract(marketAddr, abis.Market as any, admin);
@@ -172,6 +200,15 @@ async function main() {
     const [pY, pN] = await market.currentPrice();
     console.log(`current LMSR prices: YES=${fmtWad(pY)}, NO=${fmtWad(pN)} (sum=${fmtWad(pY + pN)})`);
     console.log(`vault principal: $${fmtUsdt0(await vault.principalUsdt0())}, value: $${fmtUsdt0(await vault.vaultValue())}`);
+
+    // On testnet, market stays open 1d so we can't fast-forward to resolution.
+    // Bail out here — entries are proven, resolution is covered by forge tests + anvil smoke.
+    if (!isLocal) {
+        console.log(`\n✓ entries landed on Mantle Sepolia.`);
+        console.log(`  market: https://sepolia.mantlescan.xyz/address/${marketAddr}`);
+        console.log(`  resolution flow is covered by forge tests + the anvil smoke.`);
+        return;
+    }
 
     header("4. time-warp + accrue yield (anvil only)");
     if (RPC_URL.includes("localhost")) {
@@ -212,10 +249,10 @@ async function main() {
     console.log(`market outcome = ${outcome} (1=YES, 2=NO, 3=INVALID)`);
 
     header("7. alice claims");
-    const aliceBalBefore = await usdt0.balanceOf(aliceW.address);
+    const aliceBalBefore: bigint = await usdt0.balanceOf(aliceW.address);
     await send(marketAlice, "claim", []);
-    const aliceBalAfter = await usdt0.balanceOf(aliceW.address);
-    const payout = aliceBalAfter - aliceBalBefore;
+    const aliceBalAfter: bigint = await usdt0.balanceOf(aliceW.address);
+    const payout: bigint = aliceBalAfter - aliceBalBefore;
     console.log(`alice claimed: $${fmtUsdt0(payout)} (staked $500)`);
     console.log(`profit: $${fmtUsdt0(payout - 500_000_000n)}`);
 

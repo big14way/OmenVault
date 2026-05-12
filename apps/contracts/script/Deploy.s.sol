@@ -18,7 +18,15 @@ contract DeployScript is Script {
         address deployer = vm.addr(pk);
         vm.startBroadcast(pk);
 
-        // Tokens (use mocks on Sepolia until production tokens are bridged).
+        // Tokens. As of 2026-05-12, none of USDT0 / sUSDe / USDY have an official
+        // Mantle Sepolia deployment, so we ship mocks that mirror each token's
+        // mainnet surface (USDT0: 6 dec non-rebasing; sUSDe: ERC-4626 share-price
+        // growth ~12% APY; USDY: 18 dec price-accruing ~5% APY).
+        //
+        // Production swap-in (Mantle mainnet, chain id 5000):
+        //   USDT0  = 0x779Ded0c9e1022225f8E0630b35a9b54bE713736 (usdt0.to)
+        //   sUSDe  = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497 (Ethena, Ethereum)
+        //   USDY   = 0x5bE26527e817998A7206475496fDE1E68957c5a6 (Ondo, Mantle, KYC-gated)
         MockUSDT0 usdt0 = new MockUSDT0();
         MockSUSDe sUSDe = new MockSUSDe(address(usdt0));
         MockUSDY usdy = new MockUSDY(address(usdt0));
