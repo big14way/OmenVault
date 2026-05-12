@@ -29,7 +29,8 @@ dotenvConfig({path: pathResolve(__dirname_, "../../../.env"), override: true});
 
 const RPC_URL = process.env.RPC_URL ?? process.env.MANTLE_SEPOLIA_RPC_URL ?? "http://localhost:8545";
 const ADMIN_PK = process.env.PRIVATE_KEY!;
-const TRADER_PK = process.env.TRADER_PRIVATE_KEY ?? "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // anvil acct 1
+// Use `||` (not `??`) so an empty-string env var falls through to the default.
+const TRADER_PK = process.env.TRADER_PRIVATE_KEY || "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // anvil acct 1
 // Make sure runTraderOnce picks up the trader's key (not admin's, which is what
 // PRIVATE_KEY is set to in the smoke .env). cfg() inside index.ts reads this.
 process.env.TRADER_PRIVATE_KEY = TRADER_PK;

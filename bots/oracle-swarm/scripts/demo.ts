@@ -90,34 +90,38 @@ async function main() {
         }
     }
 
-    // 3. Create a known-true market. Resolution well in the future — we time-warp later.
+    // 3. Create a known-true market.
+    const isLocal = RPC_URL.includes("localhost");
     const block = await provider.getBlock("latest");
     const now = block!.timestamp;
-    console.log(`anvil time: ${now} (wallclock ${Math.floor(Date.now() / 1000)})`);
+    console.log(`chain time: ${now} (wallclock ${Math.floor(Date.now() / 1000)})`);
+    // Anvil: 1h buffer + evm_increaseTime. Testnet: 30s buffer + real-time wait.
+    const resolutionOffset = isLocal ? 3600 : 30;
     const params = {
         question: "Will ETH close above $1 on resolution?",
-        resolutionAt: now + 3600, // 1 hour buffer; we evm_increaseTime past it later
+        resolutionAt: now + resolutionOffset,
         alloraTopicId: ethers.zeroPadValue(ethers.toBeHex(14), 32),
         collateralTier: 0,
         minStakeBps: 0,
         liquidityB: 0n,
     };
-    const createRcpt = await send(factory, "createMarket", [params]);
-    const marketAddr = createRcpt.logs
-        .map((l: any) => {
-            try {
-                return factory.interface.parseLog(l);
-            } catch {
-                return null;
-            }
-        })
-        .find((p: any) => p && p.name === "MarketCreated").args.market;
+    await send(factory, "createMarket", [params]);
+    // Read fresh from factory — receipt-log parsing is brittle across RPCs.
+    const newLen: bigint = await factory.marketsLength();
+    const marketAddr: string = await factory.allMarkets(newLen - 1n);
     console.log(`market created at ${marketAddr}: "${params.question}"`);
 
-    // 4. Skip past resolutionAt (jump 2 hours).
-    await provider.send("evm_increaseTime", [7200]);
-    await provider.send("evm_mine", []);
-    console.log("time-warped 2h past resolutionAt");
+    // 4. Advance time past resolutionAt.
+    if (isLocal) {
+        await provider.send("evm_increaseTime", [7200]);
+        await provider.send("evm_mine", []);
+        console.log("time-warped 2h past resolutionAt");
+    } else {
+        const target = now + resolutionOffset + 5; // 5s slack
+        const waitMs = (target - Math.floor(Date.now() / 1000)) * 1000;
+        console.log(`waiting ${Math.ceil(waitMs / 1000)}s for chain to reach resolutionAt…`);
+        await new Promise((r) => setTimeout(r, Math.max(waitMs, 0)));
+    }
 
     // 5. Run each oracle. Set ORACLE env var for the imported voteOnce to read.
     const {voteOnce, VoteName} = await import("../src/index.js");
