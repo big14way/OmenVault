@@ -71,6 +71,7 @@ function ConnectButton() {
 
 const NAV = [
     {href: "/markets", label: "Markets"},
+    {href: "/portfolio", label: "Portfolio"},
     {href: "/agents/registry", label: "Agents"},
     {href: "/audit", label: "Audit"},
 ];

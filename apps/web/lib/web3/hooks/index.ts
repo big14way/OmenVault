@@ -6,3 +6,4 @@ export {useClaim} from "./use-claim";
 export {useCreateMarket} from "./use-create-market";
 export {useDecisions} from "./use-decisions";
 export {useAgents} from "./use-agents";
+export {usePortfolio, type PortfolioEntry} from "./use-portfolio";
