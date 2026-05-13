@@ -5,10 +5,69 @@ import {usePathname} from "next/navigation";
 import {useEffect, useState} from "react";
 import {List, X} from "@phosphor-icons/react/dist/ssr";
 import {AnimatePresence, motion} from "framer-motion";
+import {useAccount, useConnect, useDisconnect} from "wagmi";
+import {toast} from "sonner";
 import {Button} from "@/components/primitives/button";
 import {Wordmark} from "@/components/primitives/wordmark";
 import {LiveDot} from "@/components/primitives/badge";
 import {cn} from "@/lib/cn";
+
+function shortAddress(addr: string) {
+    return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+function ConnectButton() {
+    const {address, isConnected} = useAccount();
+    const {connect, connectors, isPending} = useConnect();
+    const {disconnect} = useDisconnect();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
+    const handleClick = () => {
+        if (isConnected) {
+            disconnect();
+            return;
+        }
+        const injected = connectors.find((c) => c.id === "injected") ?? connectors[0];
+        if (!injected) {
+            toast("No wallet detected", {
+                description: "Install MetaMask or another injected wallet to connect.",
+            });
+            return;
+        }
+        connect(
+            {connector: injected},
+            {
+                onError: (err) =>
+                    toast("Couldn't connect wallet", {description: err.message}),
+            }
+        );
+    };
+
+    const label = !mounted
+        ? "Connect Wallet"
+        : isPending
+            ? "Connecting…"
+            : isConnected && address
+                ? shortAddress(address)
+                : "Connect Wallet";
+
+    return (
+        <Button size="sm" variant="outline" onClick={handleClick} disabled={isPending}>
+            <motion.span
+                animate={{opacity: [0.65, 1, 0.65]}}
+                transition={{
+                    duration: 2.2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                }}
+                className="inline-flex h-1.5 w-1.5 rounded-full bg-amber transition-colors group-hover:bg-night"
+                style={{boxShadow: "0 0 6px rgba(242, 163, 65, 0.7)"}}
+            />
+            {label}
+        </Button>
+    );
+}
 
 const NAV = [
     {href: "/markets", label: "Markets"},
@@ -71,19 +130,7 @@ export function TopNav() {
                         <LiveDot variant="static" />
                         Mantle Sepolia
                     </span>
-                    <Button size="sm" variant="outline">
-                        <motion.span
-                            animate={{opacity: [0.65, 1, 0.65]}}
-                            transition={{
-                                duration: 2.2,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                            }}
-                            className="inline-flex h-1.5 w-1.5 rounded-full bg-amber transition-colors group-hover:bg-night"
-                            style={{boxShadow: "0 0 6px rgba(242, 163, 65, 0.7)"}}
-                        />
-                        Connect Wallet
-                    </Button>
+                    <ConnectButton />
                 </div>
 
                 <button
@@ -120,19 +167,7 @@ export function TopNav() {
                                     <LiveDot />
                                     Mantle Sepolia
                                 </span>
-                                <Button size="sm" variant="outline">
-                                    <motion.span
-                                        animate={{opacity: [0.65, 1, 0.65]}}
-                                        transition={{
-                                            duration: 2.2,
-                                            repeat: Infinity,
-                                            ease: "easeInOut",
-                                        }}
-                                        className="inline-flex h-1.5 w-1.5 rounded-full bg-amber transition-colors group-hover:bg-night"
-                                        style={{boxShadow: "0 0 6px rgba(242, 163, 65, 0.7)"}}
-                                    />
-                                    Connect Wallet
-                                </Button>
+                                <ConnectButton />
                             </div>
                         </nav>
                     </motion.div>
