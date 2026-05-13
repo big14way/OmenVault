@@ -6,12 +6,17 @@
  */
 
 import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {useAccount, useWalletClient} from "wagmi";
+import {useAccount, useChainId, useSwitchChain, useWalletClient} from "wagmi";
 import type {Address} from "viem";
 import {maxUint256, keccak256, toBytes} from "viem";
+import {toast} from "sonner";
 import {publicClient} from "../client";
 import {deployment} from "../config";
 import {marketAbi, usdt0Abi} from "../abis";
+
+const TOAST_ID = "enter";
+
+const chainLabel = (id: number) => (id === 5003 ? "Mantle Sepolia" : id === 31337 ? "Anvil" : `chain ${id}`);
 
 export interface EnterParams {
     market: Address;
@@ -24,14 +29,28 @@ export interface EnterParams {
 const zero = `0x${"00".repeat(32)}` as `0x${string}`;
 
 export function useEnter() {
-    const {address: bettor} = useAccount();
-    const {data: walletClient} = useWalletClient();
+    const {address: bettor, isConnected} = useAccount();
+    const chainId = useChainId();
+    const {switchChainAsync} = useSwitchChain();
+    const {data: walletClient, refetch: refetchWalletClient} = useWalletClient({
+        chainId: deployment.chainId as 5003 | 31337,
+    });
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: async (params: EnterParams) => {
-            if (!bettor || !walletClient) throw new Error("wallet not connected");
+            if (!isConnected || !bettor) throw new Error("Wallet not connected — click Connect Wallet first.");
             if (!deployment.usdt0) throw new Error("USDT0 address missing in env");
+
+            let wc = walletClient;
+            if (chainId !== deployment.chainId) {
+                await switchChainAsync({chainId: deployment.chainId as 5003 | 31337});
+                const refreshed = await refetchWalletClient();
+                wc = refreshed.data;
+            }
+            if (!wc) {
+                throw new Error(`Switch your wallet to ${chainLabel(deployment.chainId)} and retry.`);
+            }
 
             const allowance = (await publicClient.readContract({
                 address: deployment.usdt0,
@@ -41,24 +60,28 @@ export function useEnter() {
             })) as bigint;
 
             if (allowance < params.amountUsdt0) {
-                const approveHash = await walletClient.writeContract({
+                toast.loading("Step 1/2 — confirm USDT0 approval in MetaMask…", {id: TOAST_ID});
+                const approveHash = await wc.writeContract({
                     address: deployment.usdt0,
                     abi: usdt0Abi,
                     functionName: "approve",
                     args: [params.market, maxUint256],
                 });
+                toast.loading("Approval submitted. Waiting for receipt…", {id: TOAST_ID});
                 await publicClient.waitForTransactionReceipt({hash: approveHash});
             }
 
             const alloraSnap = params.alloraSnapshot ?? keccak256(toBytes("allora:no-forecast"));
             const nansenSnap = params.nansenSnapshot ?? zero;
 
-            const hash = await walletClient.writeContract({
+            toast.loading("Step 2/2 — confirm entry in MetaMask…", {id: TOAST_ID});
+            const hash = await wc.writeContract({
                 address: params.market,
                 abi: marketAbi,
                 functionName: "enter",
                 args: [params.side, params.amountUsdt0, alloraSnap, nansenSnap],
             });
+            toast.loading("Entry submitted. Waiting for confirmation…", {id: TOAST_ID});
             const receipt = await publicClient.waitForTransactionReceipt({hash});
             return receipt;
         },

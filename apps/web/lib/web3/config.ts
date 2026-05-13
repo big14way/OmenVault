@@ -40,22 +40,25 @@ export interface Deployment {
     sUSDe?: `0x${string}`;
 }
 
-function envAddr(key: string): `0x${string}` | undefined {
-    const v = process.env[key];
+// IMPORTANT: each property must reference `process.env.NEXT_PUBLIC_*` as a *static*
+// member-access expression. Webpack's DefinePlugin only inlines NEXT_PUBLIC_* vars
+// for static accessors; a `process.env[key]` indirection would resolve to undefined
+// on the client because `process.env` is empty in the browser bundle.
+function asAddr(v: string | undefined): `0x${string}` | undefined {
     if (!v || !v.startsWith("0x") || v.length !== 42) return undefined;
     return v as `0x${string}`;
 }
 
 export const deployment: Deployment = {
     chainId,
-    marketFactory: envAddr("NEXT_PUBLIC_MARKET_FACTORY_ADDRESS"),
-    agentRegistry: envAddr("NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS"),
-    oracleSwarm: envAddr("NEXT_PUBLIC_ORACLE_SWARM_ADDRESS"),
-    alloraConsumer: envAddr("NEXT_PUBLIC_ALLORA_CONSUMER_ADDRESS"),
-    decisionLog: envAddr("NEXT_PUBLIC_DECISION_LOG_ADDRESS"),
-    usdt0: envAddr("NEXT_PUBLIC_USDT0_ADDRESS"),
-    usdy: envAddr("NEXT_PUBLIC_USDY_ADDRESS"),
-    sUSDe: envAddr("NEXT_PUBLIC_SUSDE_ADDRESS"),
+    marketFactory: asAddr(process.env.NEXT_PUBLIC_MARKET_FACTORY_ADDRESS),
+    agentRegistry: asAddr(process.env.NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS),
+    oracleSwarm: asAddr(process.env.NEXT_PUBLIC_ORACLE_SWARM_ADDRESS),
+    alloraConsumer: asAddr(process.env.NEXT_PUBLIC_ALLORA_CONSUMER_ADDRESS),
+    decisionLog: asAddr(process.env.NEXT_PUBLIC_DECISION_LOG_ADDRESS),
+    usdt0: asAddr(process.env.NEXT_PUBLIC_USDT0_ADDRESS),
+    usdy: asAddr(process.env.NEXT_PUBLIC_USDY_ADDRESS),
+    sUSDe: asAddr(process.env.NEXT_PUBLIC_SUSDE_ADDRESS),
 };
 
 export function missingAddresses(): string[] {

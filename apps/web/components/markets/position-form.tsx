@@ -11,6 +11,7 @@ import {cn} from "@/lib/cn";
 import {formatUsdt0, formatPercent, timeUntil} from "@/lib/format";
 import {TIER_APY, type Market} from "@/lib/types";
 import {useEnter} from "@/lib/web3/hooks/use-enter";
+import {publicClient} from "@/lib/web3/client";
 
 interface PositionFormProps {
     market: Market;
@@ -46,6 +47,25 @@ export function PositionForm({market}: PositionFormProps) {
         if (!isAddress(market.address)) {
             toast("Mock market", {
                 description: "This market is seeded design data. Create or open a real on-chain market.",
+            });
+            return;
+        }
+        // Catch mock markets whose addresses pass isAddress() but point at empty bytecode.
+        // Without this, the approve/enter txs go through, revert on-chain, and burn gas.
+        try {
+            toast.loading("Checking market contract…", {id: "enter"});
+            const code = await publicClient.getCode({address: market.address as `0x${string}`});
+            if (!code || code === "0x") {
+                toast("Mock market", {
+                    id: "enter",
+                    description: "No contract deployed at this address. Pick a real market from /markets or deploy one via /markets/new.",
+                });
+                return;
+            }
+        } catch (err) {
+            toast.error("Couldn't reach RPC", {
+                id: "enter",
+                description: "Check your Mantle Sepolia RPC and try again.",
             });
             return;
         }

@@ -5,20 +5,34 @@
  */
 
 import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {useWalletClient} from "wagmi";
+import {useAccount, useChainId, useSwitchChain, useWalletClient} from "wagmi";
 import type {Address} from "viem";
 import {publicClient} from "../client";
 import {deployment} from "../config";
 import {marketAbi} from "../abis";
 
+const chainLabel = (id: number) => (id === 5003 ? "Mantle Sepolia" : id === 31337 ? "Anvil" : `chain ${id}`);
+
 export function useClaim() {
-    const {data: walletClient} = useWalletClient();
+    const {isConnected} = useAccount();
+    const chainId = useChainId();
+    const {switchChainAsync} = useSwitchChain();
+    const {data: walletClient, refetch: refetchWalletClient} = useWalletClient({
+        chainId: deployment.chainId as 5003 | 31337,
+    });
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: async (market: Address) => {
-            if (!walletClient) throw new Error("wallet not connected");
-            const hash = await walletClient.writeContract({
+            if (!isConnected) throw new Error("Wallet not connected — click Connect Wallet first.");
+            let wc = walletClient;
+            if (chainId !== deployment.chainId) {
+                await switchChainAsync({chainId: deployment.chainId as 5003 | 31337});
+                const refreshed = await refetchWalletClient();
+                wc = refreshed.data;
+            }
+            if (!wc) throw new Error(`Switch your wallet to ${chainLabel(deployment.chainId)} and retry.`);
+            const hash = await wc.writeContract({
                 address: market,
                 abi: marketAbi,
                 functionName: "claim",

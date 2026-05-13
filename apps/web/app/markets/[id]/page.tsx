@@ -19,6 +19,7 @@ import {
 } from "@/lib/mock-data";
 import {TIER_APY} from "@/lib/types";
 import {useMarket} from "@/lib/web3/hooks/use-market";
+import {deployment} from "@/lib/web3/config";
 import {usePosition} from "@/lib/web3/hooks/use-position";
 import {
     formatDateLong,
@@ -32,21 +33,33 @@ import {cn} from "@/lib/cn";
 export default function MarketDetailPage() {
     const params = useParams<{id: string}>();
     const id = params.id;
-    // Try on-chain first; fall back to mocks for the seeded design-time IDs.
-    const {data: onChainMarket} = useMarket(id);
-    const market = onChainMarket ?? findMarket(id);
+    // When the factory is configured we never fall back to mocks — entering on a
+    // non-deployed mock would burn gas. Pre-deploy frontend dev still uses mocks.
+    const {data: onChainMarket, isLoading: marketLoading} = useMarket(id);
+    const factoryConfigured = Boolean(deployment.marketFactory);
+    const market = factoryConfigured ? onChainMarket : (onChainMarket ?? findMarket(id));
     const {data: onChainPosition} = usePosition(id);
 
     const [tab, setTab] = useState<"activity" | "stats" | "allora" | "nansen">("activity");
 
     if (!market) {
+        if (factoryConfigured && marketLoading) {
+            return (
+                <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-24 text-center">
+                    <p className="font-mono text-[12px] uppercase tracking-eyebrow text-fg-mute">
+                        Loading market from chain…
+                    </p>
+                </main>
+            );
+        }
         notFound();
     }
 
     const decisions = decisionsForMarket(market.id);
     const oracleVotes = MOCK_ORACLE_VOTES[market.id] ?? [];
-    const myPosition =
-        onChainPosition ?? MOCK_POSITIONS.find((p) => p.marketId === market.id);
+    const myPosition = factoryConfigured
+        ? onChainPosition
+        : (onChainPosition ?? MOCK_POSITIONS.find((p) => p.marketId === market.id));
     const apy = TIER_APY[market.tier];
 
     return (

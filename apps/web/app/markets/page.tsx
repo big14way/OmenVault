@@ -22,11 +22,13 @@ export default function MarketsListPage() {
         search: "",
     });
 
-    // Real markets if the factory is configured + the chain returns any; else mocks
-    // so the page still composes during pre-deploy frontend work.
+    // When the factory address is configured we trust the chain as the only source
+    // of truth — even while loading or when zero markets exist. Falling back to mocks
+    // here led users into entering positions on non-deployed addresses.
+    // Mocks are only used in pre-deploy frontend work when no factory is configured.
     const {data: onChainMarkets, isLoading} = useMarkets();
-    const usingChain = Boolean(deployment.marketFactory) && (onChainMarkets?.length ?? 0) > 0;
-    const markets = usingChain ? onChainMarkets! : MOCK_MARKETS;
+    const factoryConfigured = Boolean(deployment.marketFactory);
+    const markets = factoryConfigured ? (onChainMarkets ?? []) : MOCK_MARKETS;
 
     const counts = useMemo(
         () => ({
@@ -61,7 +63,7 @@ export default function MarketsListPage() {
                 break;
         }
         return xs;
-    }, [filters]);
+    }, [filters, markets]);
 
     return (
         <main className="relative pb-32">
@@ -105,7 +107,13 @@ export default function MarketsListPage() {
                             </p>
                         </div>
 
-                        {filtered.length === 0 ? (
+                        {factoryConfigured && isLoading && markets.length === 0 ? (
+                            <div className="border border-border bg-surface p-16 text-center">
+                                <p className="font-mono text-[12px] text-fg-mute uppercase tracking-eyebrow">
+                                    Loading markets from chain…
+                                </p>
+                            </div>
+                        ) : filtered.length === 0 ? (
                             <EmptyState
                                 onReset={() =>
                                     setFilters({...filters, search: "", tier: "all"})
