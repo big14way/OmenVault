@@ -26,7 +26,7 @@ export default function MarketsListPage() {
     // of truth — even while loading or when zero markets exist. Falling back to mocks
     // here led users into entering positions on non-deployed addresses.
     // Mocks are only used in pre-deploy frontend work when no factory is configured.
-    const {data: onChainMarkets, isLoading} = useMarkets();
+    const {data: onChainMarkets, isLoading, isError, error, refetch} = useMarkets();
     const factoryConfigured = Boolean(deployment.marketFactory);
     const markets = factoryConfigured ? (onChainMarkets ?? []) : MOCK_MARKETS;
 
@@ -112,6 +112,30 @@ export default function MarketsListPage() {
                                 <p className="font-mono text-[12px] text-fg-mute uppercase tracking-eyebrow">
                                     Loading markets from chain…
                                 </p>
+                            </div>
+                        ) : factoryConfigured && isError && markets.length === 0 ? (
+                            <div className="border border-coral bg-surface p-16 text-center">
+                                <p className="font-display font-bold text-2xl text-bone mb-2">
+                                    Couldn't read markets from chain.
+                                </p>
+                                <p className="font-mono text-[11px] text-fg-mute max-w-md mx-auto mb-4">
+                                    {error?.message?.slice(0, 200) ?? "RPC unreachable or rate-limited. Try again."}
+                                </p>
+                                <Button onClick={() => refetch()} variant="outline" size="sm">
+                                    Retry
+                                </Button>
+                            </div>
+                        ) : factoryConfigured && !isLoading && markets.length === 0 ? (
+                            <div className="border border-border bg-surface p-16 text-center">
+                                <p className="font-display font-bold text-2xl text-bone-soft mb-2">
+                                    No markets deployed yet.
+                                </p>
+                                <p className="font-mono text-[11px] text-fg-mute max-w-md mx-auto mb-4">
+                                    The factory has no markets — be the first to issue one.
+                                </p>
+                                <Button asChild variant="outline" size="sm">
+                                    <Link href="/markets/new">Create market</Link>
+                                </Button>
                             </div>
                         ) : filtered.length === 0 ? (
                             <EmptyState

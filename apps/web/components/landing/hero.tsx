@@ -276,7 +276,7 @@ export function Hero() {
                                         VOL 12.4k · 18 POS
                                     </span>
                                     <Link
-                                        href="/markets/7"
+                                        href="/markets"
                                         className="font-mono text-[10px] uppercase tracking-eyebrow text-amber hover:text-amber-soft underline-draw"
                                     >
                                         Open ↗

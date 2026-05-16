@@ -68,7 +68,11 @@ export function useEnter() {
                     args: [params.market, maxUint256],
                 });
                 toast.loading("Approval submitted. Waiting for receipt…", {id: TOAST_ID});
-                await publicClient.waitForTransactionReceipt({hash: approveHash});
+                await publicClient.waitForTransactionReceipt({
+                    hash: approveHash,
+                    retryCount: 30,
+                    pollingInterval: 4_000,
+                });
             }
 
             const alloraSnap = params.alloraSnapshot ?? keccak256(toBytes("allora:no-forecast"));
@@ -82,13 +86,24 @@ export function useEnter() {
                 args: [params.side, params.amountUsdt0, alloraSnap, nansenSnap],
             });
             toast.loading("Entry submitted. Waiting for confirmation…", {id: TOAST_ID});
-            const receipt = await publicClient.waitForTransactionReceipt({hash});
-            return receipt;
+            try {
+                const receipt = await publicClient.waitForTransactionReceipt({
+                    hash,
+                    retryCount: 30,
+                    pollingInterval: 4_000,
+                });
+                return {receipt, hash, slowReceipt: false};
+            } catch (err) {
+                // RPC was slow to surface the receipt. The tx is on chain — surface
+                // the hash so the caller can soft-toast and let polling catch up.
+                return {receipt: null, hash, slowReceipt: true};
+            }
         },
         onSuccess: (_r, params) => {
             queryClient.invalidateQueries({queryKey: ["market", deployment.chainId, params.market]});
             queryClient.invalidateQueries({queryKey: ["markets", deployment.chainId]});
             queryClient.invalidateQueries({queryKey: ["position", deployment.chainId, params.market]});
+            queryClient.invalidateQueries({queryKey: ["portfolio", deployment.chainId]});
         },
     });
 }

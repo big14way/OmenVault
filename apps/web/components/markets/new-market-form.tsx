@@ -140,6 +140,15 @@ export function NewMarketForm({state, onChange}: FormProps) {
             toast.success("Market deployed", {
                 id: "create",
                 description: `Mkt ${newMarket.slice(0, 10)}… — opening`,
+                action: {
+                    label: "View on explorer",
+                    onClick: () =>
+                        window.open(
+                            `https://explorer.sepolia.mantle.xyz/address/${newMarket}`,
+                            "_blank",
+                            "noopener,noreferrer"
+                        ),
+                },
             });
             router.push(`/markets/${newMarket}`);
         } catch (err: any) {

@@ -74,15 +74,29 @@ export function PositionForm({market}: PositionFormProps) {
             const sideId = side === "YES" ? 0 : 1;
             // USDT0 has 6 decimals.
             const amountUsdt0 = BigInt(Math.round(amount * 1_000_000));
-            await enterMutation.mutateAsync({
+            const result = await enterMutation.mutateAsync({
                 market: market.address as `0x${string}`,
                 side: sideId,
                 amountUsdt0,
             });
-            toast.success("Position taken", {
-                id: "enter",
-                description: `Entered ${side} on Mkt ${market.id.slice(0, 8)}…`,
-            });
+            const explorerUrl = `https://explorer.sepolia.mantle.xyz/tx/${result.hash}`;
+            const txAction = {
+                label: "View tx",
+                onClick: () => window.open(explorerUrl, "_blank", "noopener,noreferrer"),
+            };
+            if (result.slowReceipt) {
+                toast.success("Entry submitted", {
+                    id: "enter",
+                    description: "RPC was slow to surface the receipt. Your position should appear in /portfolio shortly.",
+                    action: txAction,
+                });
+            } else {
+                toast.success("Position taken", {
+                    id: "enter",
+                    description: `Entered ${side} on Mkt ${market.id.slice(0, 8)}…`,
+                    action: txAction,
+                });
+            }
         } catch (err: any) {
             toast.error("Entry failed", {
                 id: "enter",

@@ -256,8 +256,48 @@ export default function MarketDetailPage() {
 
                     {/* SIDEBAR */}
                     <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 lg:self-start">
-                        {market.status === "active" && (
+                        {market.status === "active" ? (
                             <PositionForm market={market} walletConnected={false} />
+                        ) : (
+                            <div className="border border-paper-line bg-paper p-5 md:p-6">
+                                <p className="eyebrow mb-3">
+                                    {market.status === "resolving"
+                                        ? "Trading closed"
+                                        : market.status === "resolved"
+                                            ? "Settled"
+                                            : "Disputed"}
+                                </p>
+                                <p className="font-display font-bold text-lg leading-tight mb-2">
+                                    {market.status === "resolving"
+                                        ? "Awaiting oracle resolution"
+                                        : market.status === "resolved"
+                                            ? `Final outcome · ${market.resolvedOutcome ?? "—"}`
+                                            : "Outcome under dispute"}
+                                </p>
+                                <p className="font-mono text-[11px] text-ink-mute tabular leading-relaxed">
+                                    Resolution date passed {formatDateLong(market.resolutionAt)}.{" "}
+                                    {market.status === "resolving" &&
+                                        "New positions are not accepted while the oracle swarm finalizes the outcome."}
+                                    {market.status === "resolved" &&
+                                        "If you hold a winning position, claim it from your portfolio."}
+                                </p>
+                                {market.status === "resolved" && (
+                                    <Link
+                                        href="/portfolio"
+                                        className="mt-4 inline-flex items-center gap-1.5 font-mono uppercase tracking-eyebrow text-[11px] text-amber hover:text-amber-soft underline-draw"
+                                    >
+                                        Open portfolio →
+                                    </Link>
+                                )}
+                                <div className="mt-4 pt-3 border-t border-paper-line">
+                                    <Link
+                                        href="/markets/new"
+                                        className="font-mono uppercase tracking-eyebrow text-[10.5px] text-ink-mute hover:text-amber"
+                                    >
+                                        Want to bet? Deploy a fresh market →
+                                    </Link>
+                                </div>
+                            </div>
                         )}
 
                         {myPosition && (

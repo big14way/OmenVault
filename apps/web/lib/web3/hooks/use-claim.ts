@@ -38,11 +38,16 @@ export function useClaim() {
                 functionName: "claim",
                 args: [],
             });
-            return publicClient.waitForTransactionReceipt({hash});
+            return publicClient.waitForTransactionReceipt({
+                hash,
+                retryCount: 30,
+                pollingInterval: 4_000,
+            });
         },
         onSuccess: (_r, market) => {
             queryClient.invalidateQueries({queryKey: ["market", deployment.chainId, market]});
             queryClient.invalidateQueries({queryKey: ["position", deployment.chainId, market]});
+            queryClient.invalidateQueries({queryKey: ["portfolio", deployment.chainId]});
         },
     });
 }

@@ -60,7 +60,11 @@ export function useCreateMarket() {
                     },
                 ],
             });
-            const receipt = await publicClient.waitForTransactionReceipt({hash});
+            const receipt = await publicClient.waitForTransactionReceipt({
+                hash,
+                retryCount: 30,
+                pollingInterval: 4_000,
+            });
 
             for (const log of receipt.logs) {
                 try {
