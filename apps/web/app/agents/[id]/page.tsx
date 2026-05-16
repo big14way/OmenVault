@@ -18,13 +18,22 @@ import {deployment} from "@/lib/web3/config";
 export default function AgentProfilePage() {
     const params = useParams<{id: string}>();
     const agentId = parseInt(params.id, 10);
-    const {data: onChainAgents} = useAgents();
+    const {data: onChainAgents, isLoading: agentsLoading} = useAgents();
     const registryConfigured = Boolean(deployment.agentRegistry);
     const agent = registryConfigured
         ? onChainAgents?.find((a) => a.id === agentId)
         : onChainAgents?.find((a) => a.id === agentId) ?? findAgent(agentId);
 
     if (!agent || isNaN(agentId)) {
+        if (registryConfigured && agentsLoading) {
+            return (
+                <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-24 text-center">
+                    <p className="font-mono text-[12px] uppercase tracking-eyebrow text-fg-mute">
+                        Loading agent from chain…
+                    </p>
+                </main>
+            );
+        }
         notFound();
     }
 

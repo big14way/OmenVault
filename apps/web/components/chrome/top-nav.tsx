@@ -120,6 +120,7 @@ const NAV = [
     {href: "/markets", label: "Markets"},
     {href: "/portfolio", label: "Portfolio"},
     {href: "/agents/registry", label: "Agents"},
+    {href: "/swarm", label: "Swarm"},
     {href: "/audit", label: "Audit"},
 ];
 

@@ -12,6 +12,7 @@
     "start:c": "ORACLE=C tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "demo": "tsx scripts/demo.ts",
+    "vote": "tsx scripts/vote.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
