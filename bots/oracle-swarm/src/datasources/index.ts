@@ -1,8 +1,8 @@
 /**
  * Oracle data-source assignments per the build brief:
- *   Oracle A: CoinGecko + Binance
- *   Oracle B: Kraken + Coinbase
- *   Oracle C: CryptoCompare + Pyth (TODO — Pyth historical needs more glue)
+ *   Oracle A: CoinGecko + Binance     (broad-market consensus)
+ *   Oracle B: Kraken + Coinbase       (regulated venue books)
+ *   Oracle C: Pyth + Coinbase         (on-chain oracle + venue cross-check)
  *
  * Each oracle averages its two sources for robustness. If one source fails,
  * we fall back to the other; if both fail, we return INVALID.
@@ -13,13 +13,14 @@ import {coingecko} from "./coingecko.js";
 import {binance} from "./binance.js";
 import {kraken} from "./kraken.js";
 import {coinbase} from "./coinbase.js";
+import {pyth} from "./pyth.js";
 
 export type OracleId = "A" | "B" | "C";
 
 export const SOURCES: Record<OracleId, DataSource[]> = {
     A: [coingecko, binance],
     B: [kraken, coinbase],
-    C: [coingecko, kraken], // CryptoCompare/Pyth historical to be added by team
+    C: [pyth, coinbase],
 };
 
 export interface AggregatedQuote {
