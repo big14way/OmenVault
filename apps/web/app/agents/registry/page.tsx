@@ -11,7 +11,10 @@ import {
 import {MOCK_AGENTS, MOCK_DECISIONS} from "@/lib/mock-data";
 import type {Agent} from "@/lib/types";
 import {useAgents} from "@/lib/web3/hooks/use-agents";
+import {useAgentHeartbeats} from "@/lib/web3/hooks/use-agent-heartbeats";
+import {useForecasts} from "@/lib/web3/hooks/use-forecasts";
 import {deployment} from "@/lib/web3/config";
+import {relativeTime} from "@/lib/format";
 
 const TYPE_MATCH: Record<RosterType, (a: Agent) => boolean> = {
     all: () => true,
@@ -38,8 +41,22 @@ export default function AgentsRegistryPage() {
     const [sort, setSort] = useState<RosterSort>("rep");
 
     const {data: onChainAgents} = useAgents();
-    const usingChain = Boolean(deployment.agentRegistry) && (onChainAgents?.length ?? 0) > 0;
-    const agents = usingChain ? onChainAgents! : MOCK_AGENTS;
+    const {data: heartbeats} = useAgentHeartbeats();
+    const registryConfigured = Boolean(deployment.agentRegistry);
+    // Once the registry env is set, the chain is the only source of truth — falling
+    // back to MOCK_AGENTS here would route clicks to non-existent token IDs.
+    const rawAgents = registryConfigured ? (onChainAgents ?? []) : MOCK_AGENTS;
+    // Fold DecisionLog heartbeats into lastActionAt so "active in last 30m" and
+    // each row's last-seen value reflect real on-chain activity, not just the
+    // agent's registration timestamp.
+    const agents: Agent[] = useMemo(() => {
+        if (!heartbeats || heartbeats.size === 0) return rawAgents;
+        return rawAgents.map((a) => {
+            const hb = heartbeats.get(a.id);
+            if (!hb) return a;
+            return {...a, lastActionAt: Math.max(a.lastActionAt, hb.lastSeenSec * 1000)};
+        });
+    }, [rawAgents, heartbeats]);
 
     const counts: Record<RosterType, number> = useMemo(
         () => ({
@@ -85,6 +102,9 @@ export default function AgentsRegistryPage() {
         [agents]
     );
 
+    const {data: forecasts} = useForecasts();
+    const latestForecast = forecasts?.[0];
+
     return (
         <main className="relative flex-1 flex flex-col pb-24">
             {/* Header */}
@@ -98,6 +118,24 @@ export default function AgentsRegistryPage() {
                         <span className="text-amber">{activeNow}</span> active in last 30m · ERC-8004
                         soulbound
                     </p>
+
+                    {latestForecast && (
+                        <div className="mt-6 inline-flex items-center gap-3 border border-border bg-night px-4 py-2.5">
+                            <span className="inline-flex w-1.5 h-1.5 rounded-full bg-mint animate-pulse" style={{boxShadow: "0 0 6px rgba(118, 217, 168, 0.75)"}} aria-hidden />
+                            <span className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute">Allora · {latestForecast.topicLabel}</span>
+                            <span className="font-mono text-[12px] tabular text-bone">
+                                P(YES) = {latestForecast.valueFloat.toFixed(3)}
+                            </span>
+                            <span className="font-mono text-[10.5px] tabular text-fg-faint">
+                                {relativeTime(latestForecast.timestampSec * 1000)}
+                            </span>
+                            {forecasts && forecasts.length > 1 && (
+                                <span className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute">
+                                    · {forecasts.length} writes (24h)
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
             </section>
 

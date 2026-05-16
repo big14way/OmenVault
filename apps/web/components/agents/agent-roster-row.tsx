@@ -98,7 +98,15 @@ export function AgentRosterRow({agent}: AgentRosterRowProps) {
             </div>
 
             {/* Last seen */}
-            <div className="hidden md:block text-right shrink-0 w-[80px]">
+            <div className="hidden md:flex items-center justify-end gap-1.5 shrink-0 w-[100px]">
+                {Date.now() - agent.lastActionAt < 5 * 60_000 && (
+                    <span
+                        className="inline-block w-1.5 h-1.5 rounded-full bg-mint animate-pulse"
+                        style={{boxShadow: "0 0 6px rgba(118, 217, 168, 0.75)"}}
+                        title="Active in last 5 minutes"
+                        aria-label="online"
+                    />
+                )}
                 <span className="font-mono text-[10.5px] uppercase tracking-eyebrow text-fg-mute tabular">
                     {relativeTime(agent.lastActionAt).replace(" ago", "")}
                 </span>
