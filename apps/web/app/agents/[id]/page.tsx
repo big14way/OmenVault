@@ -11,25 +11,37 @@ import {formatUsdt0} from "@/lib/format";
 import {cn} from "@/lib/cn";
 import type {Decision, Market} from "@/lib/types";
 import {useAgents} from "@/lib/web3/hooks/use-agents";
-
-function decisionsFor(agentId: number): Decision[] {
-    return MOCK_DECISIONS.filter((d) => d.agentId === agentId).sort(
-        (a, b) => b.timestamp - a.timestamp
-    );
-}
+import {useDecisions} from "@/lib/web3/hooks/use-decisions";
+import {useMarkets} from "@/lib/web3/hooks/use-markets";
+import {deployment} from "@/lib/web3/config";
 
 export default function AgentProfilePage() {
     const params = useParams<{id: string}>();
     const agentId = parseInt(params.id, 10);
     const {data: onChainAgents} = useAgents();
-    const agent =
-        onChainAgents?.find((a) => a.id === agentId) ?? findAgent(agentId);
+    const registryConfigured = Boolean(deployment.agentRegistry);
+    const agent = registryConfigured
+        ? onChainAgents?.find((a) => a.id === agentId)
+        : onChainAgents?.find((a) => a.id === agentId) ?? findAgent(agentId);
 
     if (!agent || isNaN(agentId)) {
         notFound();
     }
 
-    const decisions = useMemo(() => decisionsFor(agentId), [agentId]);
+    // Chain-derived decisions filtered for this agent. Falls back to mocks only
+    // pre-deploy. Chain rows carry an ipfsCid pointer that the row component can
+    // expand on click to fetch full reasoning.
+    const {data: onChainDecisions} = useDecisions();
+    const decisionsSource: Decision[] = registryConfigured
+        ? (onChainDecisions ?? [])
+        : MOCK_DECISIONS;
+    const decisions = useMemo(
+        () => decisionsSource.filter((d) => d.agentId === agentId).sort((a, b) => b.timestamp - a.timestamp),
+        [decisionsSource, agentId],
+    );
+
+    const {data: onChainMarkets} = useMarkets();
+    const marketSource = registryConfigured ? (onChainMarkets ?? []) : MOCK_MARKETS;
 
     const marketsTouched = useMemo(
         () => Array.from(new Set(decisions.map((d) => d.marketId).filter(Boolean))) as string[],
@@ -136,7 +148,7 @@ export default function AgentProfilePage() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
                                 {activePositions.map((d) => {
-                                    const market = MOCK_MARKETS.find((m) => m.id === d.marketId);
+                                    const market = marketSource.find((m) => m.id === d.marketId);
                                     if (!market) return null;
                                     return (
                                         <PositionMini key={d.id} decision={d} market={market} />
@@ -163,7 +175,7 @@ export default function AgentProfilePage() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
                                 {marketsTouched.map((mid) => {
-                                    const market = MOCK_MARKETS.find((m) => m.id === mid);
+                                    const market = marketSource.find((m) => m.id === mid);
                                     if (!market) return null;
                                     const vote = decisions.find(
                                         (d) => d.kind === "VOTE" && d.marketId === mid

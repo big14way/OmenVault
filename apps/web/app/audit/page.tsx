@@ -76,12 +76,15 @@ function AuditPageInner() {
     const [filters, setFilters] = useState<LedgerFilterState>(initial);
     const [openDecision, setOpenDecision] = useState<Decision | null>(null);
 
-    // Real events if the DecisionLog has any; else seeded mocks for design-time browsing.
+    // Once DecisionLog/MarketFactory are configured, the chain is the only source
+    // of truth — falling back to mocks would surface ledger rows that link to
+    // non-existent market IDs and confuse the demo.
     const {data: onChainDecisions} = useDecisions();
     const {data: onChainMarkets} = useMarkets();
-    const usingChain = Boolean(deployment.decisionLog) && (onChainDecisions?.length ?? 0) > 0;
-    const decisions = usingChain ? onChainDecisions! : MOCK_DECISIONS;
-    const marketSource = (onChainMarkets?.length ?? 0) > 0 ? onChainMarkets! : MOCK_MARKETS;
+    const decisionLogConfigured = Boolean(deployment.decisionLog);
+    const factoryConfigured = Boolean(deployment.marketFactory);
+    const decisions = decisionLogConfigured ? (onChainDecisions ?? []) : MOCK_DECISIONS;
+    const marketSource = factoryConfigured ? (onChainMarkets ?? []) : MOCK_MARKETS;
 
     // Sync filter state to URL params (shareable links)
     useEffect(() => {

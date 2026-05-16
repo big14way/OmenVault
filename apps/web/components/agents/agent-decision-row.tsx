@@ -7,6 +7,7 @@ import {ArrowSquareOut, CaretDown} from "@phosphor-icons/react/dist/ssr";
 import {cn} from "@/lib/cn";
 import {formatPercent, formatUsdt0, relativeTime} from "@/lib/format";
 import type {Decision} from "@/lib/types";
+import {useIpfsJson} from "@/lib/web3/hooks/use-ipfs";
 
 interface Props {
     decision: Decision;
@@ -56,8 +57,16 @@ function describe(d: Decision) {
 export function AgentDecisionRow({decision}: Props) {
     const [open, setOpen] = useState(false);
     const d = describe(decision);
-    const reasoning = decision.payload.reasoning;
-    const hasDetail = Boolean(reasoning) || decision.payload.alloraForecast != null;
+    // Reasoning either comes inline from mock data, or via an IPFS cid that the
+    // bot pinned when emitting the Decision event. The IPFS fetch is lazy —
+    // only kicks off once the row is expanded.
+    const inlineReasoning = decision.payload.reasoning;
+    const ipfsCid = decision.payload.ipfsHash;
+    const {data: ipfsBlob, isLoading: ipfsLoading, isError: ipfsError} = useIpfsJson(ipfsCid, open);
+    const fetchedReasoning = typeof ipfsBlob?.reasoning === "string" ? ipfsBlob.reasoning : undefined;
+    const reasoning = inlineReasoning ?? fetchedReasoning;
+    const hasDetail =
+        Boolean(inlineReasoning) || Boolean(ipfsCid) || decision.payload.alloraForecast != null;
 
     return (
         <div className="border-b border-border-soft last:border-b-0">
@@ -174,10 +183,28 @@ export function AgentDecisionRow({decision}: Props) {
 
                             {reasoning && (
                                 <div className="border-l border-amber pl-4 py-1">
-                                    <p className="text-[13px] leading-relaxed text-bone">
+                                    <p className="text-[13px] leading-relaxed text-bone whitespace-pre-line">
                                         {reasoning}
                                     </p>
                                 </div>
+                            )}
+
+                            {!reasoning && ipfsCid && ipfsLoading && (
+                                <p className="font-mono text-[11px] text-fg-mute">
+                                    Loading reasoning from IPFS…
+                                </p>
+                            )}
+
+                            {!reasoning && ipfsCid && ipfsError && (
+                                <p className="font-mono text-[11px] text-coral">
+                                    Couldn't fetch reasoning from IPFS gateway.
+                                </p>
+                            )}
+
+                            {!reasoning && ipfsCid && !ipfsLoading && !ipfsError && ipfsBlob && (
+                                <pre className="font-mono text-[11px] text-fg-mute whitespace-pre-wrap break-words">
+                                    {JSON.stringify(ipfsBlob, null, 2).slice(0, 800)}
+                                </pre>
                             )}
 
                             {decision.payload.ipfsHash && (
