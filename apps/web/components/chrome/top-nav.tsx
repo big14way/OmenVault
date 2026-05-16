@@ -10,10 +10,57 @@ import {toast} from "sonner";
 import {Button} from "@/components/primitives/button";
 import {Wordmark} from "@/components/primitives/wordmark";
 import {LiveDot} from "@/components/primitives/badge";
+import {useUsdt0Balance, useFaucet} from "@/lib/web3/hooks/use-usdt0";
+import {formatUsdt0} from "@/lib/format";
 import {cn} from "@/lib/cn";
 
 function shortAddress(addr: string) {
     return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+function BalancePill() {
+    const {isConnected} = useAccount();
+    const {data: balance} = useUsdt0Balance();
+    const faucet = useFaucet();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted || !isConnected) return null;
+
+    const onMint = () => {
+        toast.loading("Minting 1,000 USDT0…", {id: "faucet"});
+        faucet.mutate(undefined, {
+            onSuccess: (r) => {
+                const url = `https://explorer.sepolia.mantle.xyz/tx/${r.hash}`;
+                toast.success("Minted 1,000 USDT0", {
+                    id: "faucet",
+                    description: r.slowReceipt ? "Receipt was slow; balance will refresh." : "Balance refreshing.",
+                    action: {
+                        label: "View tx",
+                        onClick: () => window.open(url, "_blank", "noopener,noreferrer"),
+                    },
+                });
+            },
+            onError: (err) => toast.error("Faucet failed", {id: "faucet", description: err.message?.slice(0, 80)}),
+        });
+    };
+
+    return (
+        <div className="inline-flex items-stretch border border-border bg-surface-soft font-mono text-[11px] tabular">
+            <div className="px-3 flex items-center gap-2 text-bone">
+                <span className="text-fg-mute text-[10px] uppercase tracking-eyebrow">USDT0</span>
+                <span>{balance ? formatUsdt0(balance.float) : "—"}</span>
+            </div>
+            <button
+                type="button"
+                onClick={onMint}
+                disabled={faucet.isPending}
+                title="Mint 1,000 test USDT0 (testnet faucet)"
+                className="px-2.5 border-l border-border text-amber hover:text-night hover:bg-amber transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {faucet.isPending ? "…" : "+"}
+            </button>
+        </div>
+    );
 }
 
 function ConnectButton() {
@@ -131,6 +178,7 @@ export function TopNav() {
                         <LiveDot variant="static" />
                         Mantle Sepolia
                     </span>
+                    <BalancePill />
                     <ConnectButton />
                 </div>
 
@@ -169,6 +217,9 @@ export function TopNav() {
                                     Mantle Sepolia
                                 </span>
                                 <ConnectButton />
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                                <BalancePill />
                             </div>
                         </nav>
                     </motion.div>

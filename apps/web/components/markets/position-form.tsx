@@ -11,6 +11,7 @@ import {cn} from "@/lib/cn";
 import {formatUsdt0, formatPercent, timeUntil} from "@/lib/format";
 import {TIER_APY, type Market} from "@/lib/types";
 import {useEnter} from "@/lib/web3/hooks/use-enter";
+import {useUsdt0Balance} from "@/lib/web3/hooks/use-usdt0";
 import {publicClient} from "@/lib/web3/client";
 
 interface PositionFormProps {
@@ -27,6 +28,7 @@ export function PositionForm({market}: PositionFormProps) {
     const {isConnected} = useAccount();
     const {connect, connectors} = useConnect();
     const enterMutation = useEnter();
+    const {data: balance} = useUsdt0Balance();
 
     const apy = TIER_APY[market.tier];
     const price = side === "YES" ? market.yesPrice : market.noPrice;
@@ -145,7 +147,9 @@ export function PositionForm({market}: PositionFormProps) {
                         <p className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute">
                             Amount · USDT0
                         </p>
-                        <p className="text-[11px] font-mono text-fg-faint tabular">Balance —</p>
+                        <p className="text-[11px] font-mono text-fg-faint tabular">
+                            Balance {isConnected && balance ? formatUsdt0(balance.float) : "—"}
+                        </p>
                     </div>
                     <div className="border border-border bg-night focus-within:border-amber transition-colors">
                         <input
