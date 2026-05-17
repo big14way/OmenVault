@@ -13,7 +13,6 @@ import {requireEnv, optionalEnv} from "./env.js";
 const PUBLIC_RPCS = [
     "https://mantle-sepolia.drpc.org",
     "https://rpc.sepolia.mantle.xyz",
-    "https://endpoints.omniatech.io/v1/mantle/sepolia/public",
 ];
 
 const MANTLE_SEPOLIA = Network.from(5003);
