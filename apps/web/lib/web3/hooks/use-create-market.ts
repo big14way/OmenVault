@@ -45,20 +45,43 @@ export function useCreateMarket() {
             }
             if (!wc) throw new Error(`Switch your wallet to ${chainLabel(deployment.chainId)} and retry.`);
 
+            const factory = deployment.marketFactory;
+            const createArgs = [
+                {
+                    question: params.question,
+                    resolutionAt: params.resolutionAt,
+                    alloraTopicId: params.alloraTopicId,
+                    collateralTier: params.collateralTier,
+                    minStakeBps: params.minStakeBps ?? 0,
+                    liquidityB: params.liquidityB ?? 0n,
+                },
+            ] as const;
+
+            // Mantle Sepolia's RPC occasionally returns a JS error string as a fake
+            // revert reason during MetaMask's eth_estimateGas ("Cannot destructure
+            // property 'gasLimit' of '(intermediate value)' as it is null"). We
+            // pre-estimate on the publicClient (fallback RPC pool) and pass `gas`
+            // explicitly so the wallet skips its broken estimation step.
+            let gas: bigint;
+            try {
+                const estimated = await publicClient.estimateContractGas({
+                    account: wc.account.address,
+                    address: factory,
+                    abi: marketFactoryAbi,
+                    functionName: "createMarket",
+                    args: createArgs,
+                });
+                gas = (estimated * 130n) / 100n;
+            } catch {
+                gas = 8_000_000n;
+            }
+
             const hash = await wc.writeContract({
-                address: deployment.marketFactory,
+                address: factory,
                 abi: marketFactoryAbi,
                 functionName: "createMarket",
-                args: [
-                    {
-                        question: params.question,
-                        resolutionAt: params.resolutionAt,
-                        alloraTopicId: params.alloraTopicId,
-                        collateralTier: params.collateralTier,
-                        minStakeBps: params.minStakeBps ?? 0,
-                        liquidityB: params.liquidityB ?? 0n,
-                    },
-                ],
+                args: createArgs,
+                gas,
             });
             const receipt = await publicClient.waitForTransactionReceipt({
                 hash,
@@ -77,6 +100,23 @@ export function useCreateMarket() {
                         return (parsed.args as unknown as {market: Address}).market;
                     }
                 } catch {}
+            }
+
+            // Log decoding can miss on flaky RPCs (filtered/null logs). Fall back to
+            // reading the last market off the factory — see bots/oracle-swarm/scripts/demo.ts.
+            const len = (await publicClient.readContract({
+                address: factory,
+                abi: marketFactoryAbi,
+                functionName: "marketsLength",
+            })) as bigint;
+            if (len > 0n) {
+                const last = (await publicClient.readContract({
+                    address: factory,
+                    abi: marketFactoryAbi,
+                    functionName: "allMarkets",
+                    args: [len - 1n],
+                })) as Address;
+                return last;
             }
             throw new Error("MarketCreated event not found in receipt");
         },

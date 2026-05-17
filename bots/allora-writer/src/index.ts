@@ -7,11 +7,12 @@
  * deploy).
  *
  * Sources:
- *   - Real Allora: set ALLORA_API_BASE (e.g. https://api.upshot.xyz/v2). For
- *     each configured topic the bot calls
- *     `GET ${ALLORA_API_BASE}/allora/${topicId}/latest` and parses an
- *     inference value into a P(YES) WAD.
- *   - Demo mode (no ALLORA_API_BASE): derives P(YES) from CoinGecko 24h price
+ *   - Real Allora: set ALLORA_BASE_URL (e.g. https://api.allora.network) and
+ *     optionally ALLORA_API_KEY. For each configured topic the bot calls
+ *     `GET ${ALLORA_BASE_URL}/allora/${topicId}/latest` and parses an
+ *     inference value into a P(YES) WAD. (ALLORA_API_BASE is honored as a
+ *     legacy alias.)
+ *   - Demo mode (no ALLORA_BASE_URL): derives P(YES) from CoinGecko 24h price
  *     change of the asset mapped to the topic. Clearly logged as "demo"; the
  *     contract event still emits, so the trader and UI see real activity.
  *
@@ -24,7 +25,10 @@ import {provider, signer, requireEnv, optionalEnv} from "@omenvault/shared";
 import {abis} from "@omenvault/shared/abis";
 
 const POLL_INTERVAL_SEC = Number(optionalEnv("ALLORA_POLL_INTERVAL_SEC", "60"));
-const ALLORA_API_BASE = optionalEnv("ALLORA_API_BASE");
+// Accept either name. ALLORA_BASE_URL is the canonical .env key; ALLORA_API_BASE
+// is kept as a legacy alias so existing configs keep working.
+const ALLORA_API_BASE = optionalEnv("ALLORA_BASE_URL") || optionalEnv("ALLORA_API_BASE");
+const ALLORA_API_KEY = optionalEnv("ALLORA_API_KEY");
 
 // Mapping: numeric Allora topic id → asset symbol the writer should fetch for
 // the demo path. Aligned with apps/web/components/markets/new-market-form.tsx
@@ -99,7 +103,9 @@ async function fetchDemoForecast(topic: string): Promise<ForecastResult> {
 
 async function fetchAlloraForecast(topic: string, base: string): Promise<ForecastResult> {
     const url = `${base.replace(/\/$/, "")}/allora/${topic}/latest`;
-    const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+    const headers: Record<string, string> = {};
+    if (ALLORA_API_KEY) headers["x-api-key"] = ALLORA_API_KEY;
+    const res = await fetch(url, {headers, signal: AbortSignal.timeout(8000)});
     if (!res.ok) throw new Error(`allora HTTP ${res.status}`);
     const data = (await res.json()) as {value?: string | number};
     if (data.value == null) throw new Error(`allora: response missing 'value' for topic ${topic}`);
