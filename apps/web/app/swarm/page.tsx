@@ -18,6 +18,7 @@ import {useDecisions} from "@/lib/web3/hooks/use-decisions";
 import {useAgentHeartbeats} from "@/lib/web3/hooks/use-agent-heartbeats";
 import {useResolution, useFinalize} from "@/lib/web3/hooks/use-resolution";
 import {useSubmitVote} from "@/lib/web3/hooks/use-submit-vote";
+import {useCanVote} from "@/lib/web3/hooks/use-can-vote";
 import type {Market} from "@/lib/types";
 
 /**
@@ -255,6 +256,7 @@ function PendingMarketRow({market}: {market: Market}) {
     const finalize = useFinalize();
     const submitVote = useSubmitVote();
     const {isConnected} = useAccount();
+    const {data: canVote} = useCanVote();
     const [voteSide, setVoteSide] = useState<"YES" | "NO" | "INVALID">("YES");
     const [showVoteForm, setShowVoteForm] = useState(false);
 
@@ -365,7 +367,7 @@ function PendingMarketRow({market}: {market: Market}) {
                         {finalize.isPending ? "Finalizing…" : "Finalize"}
                         <ArrowRight size={12} weight="regular" />
                     </Button>
-                ) : isConnected && voteCount < 3 ? (
+                ) : isConnected && voteCount < 3 && canVote?.eligible ? (
                     showVoteForm ? (
                         <div className="flex items-center gap-2">
                             <div className="inline-flex border border-border">
@@ -415,6 +417,19 @@ function PendingMarketRow({market}: {market: Market}) {
                             Submit vote ↗
                         </button>
                     )
+                ) : isConnected && canVote && !canVote.eligible ? (
+                    <span
+                        className="font-mono text-[10.5px] uppercase tracking-eyebrow text-fg-mute"
+                        title={
+                            !canVote.hasRole
+                                ? "Connected wallet lacks ORACLE_ROLE on OracleSwarm. Use `pnpm -F @omenvault/oracle-swarm vote …` with an oracle key."
+                                : canVote.agentId === 0
+                                  ? "Connected wallet is not registered as an ERC-8004 agent."
+                                  : "Wallet not eligible to vote."
+                        }
+                    >
+                        Awaiting oracle bots
+                    </span>
                 ) : (
                     <span className="font-mono text-[10.5px] uppercase tracking-eyebrow text-fg-mute">
                         Awaiting oracle bots

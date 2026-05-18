@@ -98,12 +98,17 @@ export function useFinalize() {
             }
             if (!wc) throw new Error(`Switch your wallet to ${chainLabel(deployment.chainId)} and retry.`);
 
-            const hash = await wc.writeContract({
+            // Pre-simulate via our fallback RPCs so we surface real revert
+            // reasons (NeedThreeVotes / TieDisagreement / AlreadyFinalized) and
+            // hand MetaMask a prepared tx instead of relying on its pre-flight.
+            const {request} = await publicClient.simulateContract({
+                account: wc.account.address,
                 address: deployment.oracleSwarm,
                 abi: oracleSwarmAbi,
                 functionName: "finalize",
                 args: [market],
             });
+            const hash = await wc.writeContract(request);
             try {
                 await publicClient.waitForTransactionReceipt({
                     hash,

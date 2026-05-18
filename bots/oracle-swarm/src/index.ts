@@ -44,6 +44,7 @@ function cfg() {
             process.env.PRIVATE_KEY!,
         SWARM: process.env.ORACLE_SWARM_ADDRESS!,
         FACTORY: process.env.MARKET_FACTORY_ADDRESS!,
+        DECISION_LOG: process.env.DECISION_LOG_ADDRESS,
         POLL_INTERVAL_MS: Number(process.env.ORACLE_POLL_MS ?? 30_000),
     };
 }
@@ -150,9 +151,24 @@ export async function voteOnce(opts: VoteOnce): Promise<VoteResult> {
             ),
         );
         const sig = await oracle.signMessage(ethers.getBytes(digest));
-        const nonce = await provider.getTransactionCount(oracleAddr, "pending");
-        const tx = await swarm.submitVote(marketAddr, vote, reasoningHash, sig, {nonce});
+        let nonce = await provider.getTransactionCount(oracleAddr, "pending");
+        const tx = await swarm.submitVote(marketAddr, vote, reasoningHash, sig, {nonce: nonce++});
         const rcpt = await tx.wait();
+
+        // Best-effort DecisionLog write so the vote shows up in /audit. Requires
+        // LOGGER_ROLE on this oracle wallet; swallowed if missing/unset.
+        if (C.DECISION_LOG) {
+            try {
+                const decisionLog = new ethers.Contract(C.DECISION_LOG, abis.DecisionLog as any, oracle);
+                // DecisionLog.Kind: 0=TRADE 1=ORACLE_VOTE 2=SIGNAL 3=OTHER
+                const cid = `ipfs://mock/${reasoningHash}`; // TODO(team): pin reasoning JSON
+                const logTx = await decisionLog.logDecision(myAgentId, 1, reasoningHash, cid, {nonce: nonce++});
+                await logTx.wait();
+            } catch (e: any) {
+                console.warn(`[oracle-${C.ORACLE_ID}] DecisionLog write skipped: ${e.shortMessage ?? e.message?.slice(0, 80)}`);
+            }
+        }
+
         return {market: marketAddr, vote, reasoningHash, txHash: rcpt.hash};
     }
 }

@@ -81,12 +81,18 @@ export function useSubmitVote() {
                 message: {raw: hexToBytes(inner)},
             });
 
-            const hash = await wc.writeContract({
+            // Pre-simulate via our fallback RPCs. This surfaces real revert
+            // reasons (NotOracle / AgentNotRegistered / AlreadyVoted / …) and
+            // bypasses MetaMask's flaky pre-flight gas estimation: viem can
+            // hand the already-prepared request straight to wallet.writeContract.
+            const {request} = await publicClient.simulateContract({
+                account: wc.account.address,
                 address: deployment.oracleSwarm,
                 abi: oracleSwarmAbi,
                 functionName: "submitVote",
                 args: [params.market, voteCode, params.reasoningHash, signature],
             });
+            const hash = await wc.writeContract(request);
             try {
                 await publicClient.waitForTransactionReceipt({
                     hash,
