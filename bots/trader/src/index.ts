@@ -18,6 +18,7 @@ import {fileURLToPath} from "node:url";
 import {dirname, resolve as pathResolve} from "node:path";
 import {ethers} from "ethers";
 import {abis} from "@omenvault/shared/abis";
+import {pinJson} from "@omenvault/shared/ipfs";
 import {decide, type Decision} from "./anthropic.js";
 import {getSignal} from "./nansen.js";
 
@@ -174,9 +175,12 @@ export async function runTraderOnce(opts: RunOptions): Promise<RunResult> {
                 ts: Date.now(),
             });
             const payloadHash = ethers.id(payload);
+            // Pin the reasoning blob to IPFS via Pinata; falls back to a
+            // deterministic mock CID if PINATA_JWT is unset. Logged separately
+            // so a Pinata outage doesn't take the on-chain write with it.
+            const cid = await pinJson(JSON.parse(payload), `omenvault-trade-${opts.marketAddr}`);
             // Note: the trader's agent token id isn't fetched here for brevity; the on-chain
             // DecisionLog accepts uint256 agentId so callers can pass 0 for unregistered.
-            const cid = "ipfs://mock"; // TODO(team): pin via @omenvault/shared/ipfs
             const tx = await decisionLog.logDecision(0, 0, payloadHash, cid, {nonce: nonce++});
             await tx.wait();
         } catch (e: any) {

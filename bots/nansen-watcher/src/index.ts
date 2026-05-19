@@ -1,35 +1,39 @@
 /**
- * Nansen watcher — polls Nansen for smart-money labels and netflow on tokens
- * referenced by active markets. Caches results. Serves a local HTTP endpoint
- * the trader bot reads from.
+ * Nansen watcher — local HTTP service the trader bot reads from to fold
+ * smart-money sentiment into its sizing decision.
  *
  * Endpoints:
  *   GET /signal?token=<address>  → { token, yesCount, noCount, lastUpdated, neutral, source }
- *   GET /health                  → { ok, mode, watchedTokens, lastPoll }
+ *   GET /health                  → { ok, mode, callsUsed, lastRefresh, cacheSize }
  *
  * Modes:
- *   - real: NANSEN_API_KEY set. The loop calls Nansen's /smart-money endpoints
- *     for each watched token and caches yes/no counts derived from netflow sign.
- *   - demo: no NANSEN_API_KEY. The loop generates a deterministic but moving
- *     signal from the token address + the current 10-minute window so the
- *     trader sees real numbers cycling without hitting a paid endpoint.
+ *   - real: NANSEN_API_KEY set. Calls POST /api/v1/token-screener once per
+ *     NANSEN_CACHE_TTL_HOURS (default 24h) and caches the top smart-money
+ *     tokens. Per-token /signal lookups serve from cache; tokens not in the
+ *     Nansen result fall back to an aggregate sentiment derived from the top
+ *     of the screener (so a demo market on a Mantle token still gets a
+ *     plausible smart-money skew).
+ *   - demo: no NANSEN_API_KEY. Deterministic-by-address moving signal so
+ *     the trader sees real-looking numbers without burning paid quota.
+ *
+ * Endpoint shape and headers match Nansen's public docs (POST JSON body,
+ * `apiKey:` header). The trader's free tier is 10 calls total — this watcher
+ * uses at most one per cache refresh window.
  */
 
 import "dotenv/config";
 import http from "node:http";
 
 const PORT = Number(process.env.NANSEN_WATCHER_PORT ?? 7755);
-const POLL_INTERVAL_SEC = Number(process.env.NANSEN_POLL_INTERVAL_SEC ?? 60);
 const API_KEY = process.env.NANSEN_API_KEY ?? "";
-const API_BASE = process.env.NANSEN_API_BASE ?? "https://api.nansen.ai/v1";
-
-// Comma-separated list of token addresses to watch. The trader bot also calls
-// /signal?token=<addr> on demand, but pre-watching the configured set keeps
-// the cache warm.
-const WATCH_TOKENS = (process.env.NANSEN_WATCH_TOKENS ?? process.env.NEXT_PUBLIC_USDT0_ADDRESS ?? "")
+const API_BASE = (process.env.NANSEN_BASE_URL ?? process.env.NANSEN_API_BASE ?? "https://api.nansen.ai").replace(/\/$/, "");
+const CACHE_TTL_HOURS = Number(process.env.NANSEN_CACHE_TTL_HOURS ?? 24);
+const MIN_REFRESH_MS = Math.max(1, CACHE_TTL_HOURS) * 3600 * 1000;
+const SCREENER_CHAINS = (process.env.NANSEN_CHAINS ?? "ethereum,solana,base")
     .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter((t) => t.length > 0);
+    .map((c) => c.trim())
+    .filter(Boolean);
+const SCREENER_PAGE_SIZE = Number(process.env.NANSEN_PAGE_SIZE ?? 100);
 
 const MODE: "real" | "demo" = API_KEY ? "real" : "demo";
 
@@ -39,38 +43,107 @@ interface Signal {
     noCount: number;
     lastUpdated: number;
     neutral: boolean;
-    source: "nansen" | "demo" | "cold";
+    source: "nansen" | "nansen-aggregate" | "demo" | "cold";
 }
 
 const cache = new Map<string, Signal>();
-let lastPoll = 0;
+let lastRefreshMs = 0;
+let callsUsed = 0;
+let aggregateSignal: Signal | null = null;
 
-async function fetchNansenSignal(token: string): Promise<Signal> {
-    // Use the Smart Money netflow endpoint. Netflow > 0 → wallets buying;
-    // netflow < 0 → wallets selling. Map to the trader's yes/no count shape.
-    const url = `${API_BASE.replace(/\/$/, "")}/smart-money/netflow?token=${token}`;
-    const res = await fetch(url, {
-        headers: {"api-key": API_KEY, accept: "application/json"},
-        signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) throw new Error(`nansen HTTP ${res.status}`);
-    const data = (await res.json()) as {netflowUsd?: number; walletCount?: number};
-    const netflow = data.netflowUsd ?? 0;
-    const wallets = data.walletCount ?? 0;
-    return {
-        token,
-        yesCount: netflow > 0 ? wallets : 0,
-        noCount: netflow < 0 ? wallets : 0,
-        lastUpdated: Math.floor(Date.now() / 1000),
-        neutral: netflow === 0,
-        source: "nansen",
+/**
+ * Best-effort extractor: Nansen response shapes vary across products. Try the
+ * fields that have appeared in their public examples; coerce anything numeric.
+ */
+function readNumber(row: Record<string, unknown>, keys: string[]): number {
+    for (const k of keys) {
+        const v = row[k];
+        if (typeof v === "number" && Number.isFinite(v)) return v;
+        if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+    }
+    return 0;
+}
+
+function readString(row: Record<string, unknown>, keys: string[]): string {
+    for (const k of keys) {
+        const v = row[k];
+        if (typeof v === "string" && v.length > 0) return v;
+    }
+    return "";
+}
+
+async function refreshCacheIfStale(force = false): Promise<void> {
+    if (MODE !== "real") return;
+    if (!force && Date.now() - lastRefreshMs < MIN_REFRESH_MS) return;
+    const body = {
+        chains: SCREENER_CHAINS,
+        timeframe: "24h",
+        filters: {only_smart_money: true, token_age_days: {min: 1, max: 365}},
+        order_by: [{field: "buy_volume", direction: "DESC"}],
+        pagination: {page: 1, per_page: SCREENER_PAGE_SIZE},
     };
+    const url = `${API_BASE}/api/v1/token-screener`;
+    callsUsed += 1;
+    const res = await fetch(url, {
+        method: "POST",
+        headers: {apiKey: API_KEY, "content-type": "application/json"},
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(`nansen HTTP ${res.status}: ${detail.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as Record<string, unknown>;
+    // Response is paginated; rows live under `data`, `tokens`, or `results`.
+    const rows = ((data.data ?? data.tokens ?? data.results ?? []) as Record<string, unknown>[]) || [];
+
+    cache.clear();
+    let aggBuyers = 0;
+    let aggSellers = 0;
+    const now = Math.floor(Date.now() / 1000);
+    for (const row of rows) {
+        const token = readString(row, ["token_address", "address", "contract_address"]).toLowerCase();
+        if (!token) continue;
+        const buyers = readNumber(row, ["smart_money_buyers", "smart_money_buy_count", "buyer_count", "n_buyers"]);
+        const sellers = readNumber(row, ["smart_money_sellers", "smart_money_sell_count", "seller_count", "n_sellers"]);
+        // Fall back to inferring from buy_volume vs sell_volume sign if explicit
+        // buyer/seller counts aren't in the response shape.
+        let yesCount = buyers;
+        let noCount = sellers;
+        if (yesCount === 0 && noCount === 0) {
+            const buyVol = readNumber(row, ["buy_volume", "buy_volume_usd"]);
+            const sellVol = readNumber(row, ["sell_volume", "sell_volume_usd"]);
+            if (buyVol > sellVol) yesCount = 1;
+            else if (sellVol > buyVol) noCount = 1;
+        }
+        aggBuyers += yesCount;
+        aggSellers += noCount;
+        cache.set(token, {
+            token,
+            yesCount,
+            noCount,
+            lastUpdated: now,
+            neutral: yesCount === noCount,
+            source: "nansen",
+        });
+    }
+    aggregateSignal = {
+        token: "<aggregate>",
+        yesCount: aggBuyers,
+        noCount: aggSellers,
+        lastUpdated: now,
+        neutral: aggBuyers === aggSellers,
+        source: "nansen-aggregate",
+    };
+    lastRefreshMs = Date.now();
+    console.log(
+        `[nansen-watcher] refreshed: tokens=${cache.size} aggregate yes=${aggBuyers} no=${aggSellers} ` +
+            `calls_used=${callsUsed}`,
+    );
 }
 
 function demoSignal(token: string): Signal {
-    // Deterministic-by-address but moves over time. Hash the address, mix in
-    // the current 10-minute window so it cycles slowly. Yields integer counts
-    // in [0, 7] for each side, which reads like real smart-money wallet counts.
     let addrSeed = 0;
     for (let i = 2; i < token.length; i += 4) {
         addrSeed = (addrSeed * 31 + parseInt(token.slice(i, i + 4) || "0", 16)) >>> 0;
@@ -89,18 +162,25 @@ function demoSignal(token: string): Signal {
     };
 }
 
-async function refreshToken(token: string) {
-    try {
-        const sig = MODE === "real" ? await fetchNansenSignal(token) : demoSignal(token);
-        cache.set(token, sig);
-    } catch (err) {
-        console.error(`[nansen-watcher] refresh failed for ${token}:`, (err as Error).message);
+function resolveSignal(tokenRaw: string): Signal {
+    const token = tokenRaw.toLowerCase();
+    if (MODE === "demo") return demoSignal(token);
+    // Real mode: prefer exact token match, then aggregate, then cold/demo.
+    const exact = cache.get(token);
+    if (exact) return exact;
+    if (aggregateSignal && (aggregateSignal.yesCount > 0 || aggregateSignal.noCount > 0)) {
+        // Re-tag aggregate signal with the requested token so the trader's logs
+        // still reference what it asked about.
+        return {...aggregateSignal, token};
     }
-}
-
-async function pollAll() {
-    lastPoll = Math.floor(Date.now() / 1000);
-    await Promise.allSettled(WATCH_TOKENS.map(refreshToken));
+    return {
+        token,
+        yesCount: 0,
+        noCount: 0,
+        lastUpdated: 0,
+        neutral: true,
+        source: "cold",
+    };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -108,7 +188,16 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === "/health") {
         res.writeHead(200, {"content-type": "application/json"});
-        res.end(JSON.stringify({ok: true, mode: MODE, watchedTokens: WATCH_TOKENS, lastPoll}));
+        res.end(
+            JSON.stringify({
+                ok: true,
+                mode: MODE,
+                callsUsed,
+                lastRefresh: lastRefreshMs ? Math.floor(lastRefreshMs / 1000) : 0,
+                cacheSize: cache.size,
+                cacheTtlHours: CACHE_TTL_HOURS,
+            }),
+        );
         return;
     }
 
@@ -119,17 +208,15 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({error: "missing ?token=<address>"}));
             return;
         }
-        if (!cache.has(tokenRaw)) await refreshToken(tokenRaw);
-        const payload: Signal = cache.get(tokenRaw) ?? {
-            token: tokenRaw,
-            yesCount: 0,
-            noCount: 0,
-            lastUpdated: 0,
-            neutral: true,
-            source: "cold",
-        };
+        // Lazy refresh if cache is stale. Suppresses errors so the trader doesn't
+        // see 500s when Nansen is rate-limited; falls back to cold/demo signal.
+        try {
+            await refreshCacheIfStale();
+        } catch (err) {
+            console.error("[nansen-watcher] lazy refresh failed:", (err as Error).message);
+        }
         res.writeHead(200, {"content-type": "application/json"});
-        res.end(JSON.stringify(payload));
+        res.end(JSON.stringify(resolveSignal(tokenRaw)));
         return;
     }
 
@@ -140,17 +227,19 @@ const server = http.createServer(async (req, res) => {
 async function main() {
     server.listen(PORT);
     console.log(
-        `[nansen-watcher] listening on http://localhost:${PORT} ` +
-            `mode=${MODE} watching=[${WATCH_TOKENS.join(", ") || "<none>"}]`,
+        `[nansen-watcher] listening on http://localhost:${PORT} mode=${MODE} ` +
+            `ttl=${CACHE_TTL_HOURS}h chains=[${SCREENER_CHAINS.join(",")}]`,
     );
     if (MODE === "demo") {
-        console.log("[nansen-watcher] no NANSEN_API_KEY set — serving deterministic demo signals.");
+        console.log("[nansen-watcher] NANSEN_API_KEY unset — serving deterministic demo signals only.");
+        return;
     }
-    if (WATCH_TOKENS.length > 0) {
-        await pollAll();
-        setInterval(() => {
-            pollAll().catch((err) => console.error("[nansen-watcher] poll error:", err));
-        }, POLL_INTERVAL_SEC * 1000);
+    // One refresh on startup (counts as 1 of 10 free calls). Subsequent refreshes
+    // are lazy and gated by MIN_REFRESH_MS.
+    try {
+        await refreshCacheIfStale(true);
+    } catch (err) {
+        console.error("[nansen-watcher] initial refresh failed:", (err as Error).message);
     }
 }
 

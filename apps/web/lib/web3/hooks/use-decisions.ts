@@ -12,7 +12,10 @@ import {deployment} from "../config";
 import type {Decision, DecisionKind} from "@/lib/types";
 
 const POLL_MS = 6_000;
-const LOOKBACK_BLOCKS = 5_000n;
+// Mantle Sepolia produces ~1 block every 2s. 50_000 blocks ≈ 27h — wide enough
+// that a demo recording stays watchable through the next day. Bump higher only
+// if a single RPC `eth_getLogs` window can handle it.
+const LOOKBACK_BLOCKS = 50_000n;
 
 const DECISION_EVENT = parseAbiItem(
     "event Decision(uint256 indexed agentId, uint8 indexed kind, bytes32 payloadHash, string ipfsCid, uint64 at, address actor)",

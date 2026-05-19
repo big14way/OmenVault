@@ -101,30 +101,65 @@ async function fetchDemoForecast(topic: string): Promise<ForecastResult> {
     };
 }
 
+const ALLORA_CHAIN_SLUG = optionalEnv("ALLORA_CHAIN_SLUG", "ethereum-11155111");
+
+async function fetchCurrentSpotUsd(topic: string): Promise<number | null> {
+    const cgId = TOPIC_TO_COINGECKO_ID[topic];
+    if (!cgId) return null;
+    try {
+        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd`;
+        const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+        if (!res.ok) return null;
+        const data = (await res.json()) as Record<string, {usd: number}>;
+        return data[cgId]?.usd ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Calls Allora's Upshot consumer endpoint, returning the topic's predicted
+ * price (network_inference_normalized) converted into a P(YES) probability by
+ * comparing against the current spot price from CoinGecko. Predicted-above-spot
+ * → higher P(YES); predicted-below-spot → lower. Same momentum curve as the
+ * demo path, but driven by a real Allora inference instead of just 24h change.
+ */
 async function fetchAlloraForecast(topic: string, base: string): Promise<ForecastResult> {
-    const url = `${base.replace(/\/$/, "")}/allora/${topic}/latest`;
+    const url = `${base.replace(/\/$/, "")}/v2/allora/consumer/${ALLORA_CHAIN_SLUG}?allora_topic_id=${topic}`;
     const headers: Record<string, string> = {};
     if (ALLORA_API_KEY) headers["x-api-key"] = ALLORA_API_KEY;
     const res = await fetch(url, {headers, signal: AbortSignal.timeout(8000)});
     if (!res.ok) throw new Error(`allora HTTP ${res.status}`);
-    const data = (await res.json()) as {value?: string | number};
-    if (data.value == null) throw new Error(`allora: response missing 'value' for topic ${topic}`);
-    // Accept either a decimal probability (0-1) or already-WAD-scaled bigint string.
-    const asNumber = typeof data.value === "number" ? data.value : Number(data.value);
-    if (Number.isFinite(asNumber) && asNumber > 0 && asNumber <= 1) {
+    const body = (await res.json()) as {
+        status?: boolean;
+        data?: {inference_data?: {network_inference_normalized?: string; topic_id?: string}};
+    };
+    const predictedStr = body.data?.inference_data?.network_inference_normalized;
+    if (!predictedStr) throw new Error(`allora: response missing inference_data for topic ${topic}`);
+    const predicted = Number(predictedStr);
+    if (!Number.isFinite(predicted) || predicted <= 0) {
+        throw new Error(`allora: non-numeric prediction "${predictedStr}" for topic ${topic}`);
+    }
+    const spot = await fetchCurrentSpotUsd(topic);
+    if (spot && spot > 0) {
+        const expectedPct = ((predicted - spot) / spot) * 100;
+        const valueE18 = momentumToProbabilityE18(expectedPct);
         return {
             topicId: topic,
-            valueE18: BigInt(Math.round(asNumber * 1e18)),
+            valueE18,
             source: "allora",
-            note: `topic ${topic}: P(YES)=${asNumber.toFixed(3)}`,
+            note: `${TOPIC_TO_SYMBOL[topic]} Allora=$${predicted.toFixed(2)} spot=$${spot.toFixed(2)} ` +
+                `(${expectedPct >= 0 ? "+" : ""}${expectedPct.toFixed(2)}%) → P(YES)=${(Number(valueE18) / 1e18).toFixed(3)}`,
         };
     }
-    // Treat as already-scaled WAD string.
+    // No spot reference; map predicted price to a probability via tanh centered
+    // at the spot we'd assume from a 0% move (i.e. just emit a neutral 0.5 with
+    // a note that we couldn't anchor it). Better than silently failing.
     return {
         topicId: topic,
-        valueE18: BigInt(String(data.value)),
+        valueE18: HALF,
         source: "allora",
-        note: `topic ${topic}: raw WAD value`,
+        note: `${TOPIC_TO_SYMBOL[topic]} Allora=$${predicted.toFixed(2)} (no spot reference → P(YES)=0.5)`,
     };
 }
 

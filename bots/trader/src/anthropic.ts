@@ -1,8 +1,13 @@
 /**
- * Anthropic claude-haiku-4-5 wrapper for trader decisions.
+ * LLM wrapper for trader decisions. Despite the filename, this file dispatches
+ * between providers based on env so index.ts can keep its existing import:
  *
- * Falls back to a deterministic heuristic when ANTHROPIC_API_KEY is unset, so
- * the bot stays demoable in CI / smoke without burning API credits.
+ *   LLM_PROVIDER=groq      → Groq (OpenAI-compatible REST, no SDK needed)
+ *   LLM_PROVIDER=anthropic → Anthropic (default if unset and ANTHROPIC_API_KEY present)
+ *   (provider key missing) → deterministic heuristic fallback
+ *
+ * The heuristic fallback always runs if no key is configured for the selected
+ * provider, so smoke tests and CI keep working without paid API credits.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -26,19 +31,35 @@ export interface Decision {
     reasoning: string;
 }
 
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
+type Provider = "groq" | "anthropic" | "heuristic";
+
+function chooseProvider(): Provider {
+    const explicit = (process.env.LLM_PROVIDER ?? "").toLowerCase();
+    const hasGroq = Boolean(process.env.GROQ_API_KEY);
+    const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY);
+    if (explicit === "groq") return hasGroq ? "groq" : "heuristic";
+    if (explicit === "anthropic") return hasAnthropic ? "anthropic" : "heuristic";
+    // No explicit preference — pick whichever key is set, preferring Groq (free tier).
+    if (hasGroq) return "groq";
+    if (hasAnthropic) return "anthropic";
+    return "heuristic";
+}
 
 export async function decide(input: DecisionInput): Promise<Decision> {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-        return mockDecide(input);
-    }
+    const provider = chooseProvider();
+    if (provider === "groq") return decideGroq(input);
+    if (provider === "anthropic") return decideAnthropic(input);
+    return mockDecide(input);
+}
 
+async function decideAnthropic(input: DecisionInput): Promise<Decision> {
+    const apiKey = process.env.ANTHROPIC_API_KEY!;
+    const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
     const client = new Anthropic({apiKey});
     const userPrompt = buildUserPrompt(input);
 
     const response = await client.messages.create({
-        model: MODEL,
+        model,
         max_tokens: 1024,
         system: SYSTEM_PROMPT,
         messages: [{role: "user", content: userPrompt}],
@@ -48,12 +69,44 @@ export async function decide(input: DecisionInput): Promise<Decision> {
     if (!textBlock || textBlock.type !== "text") {
         throw new Error("Anthropic returned no text content");
     }
-
-    return parseDecisionJson(textBlock.text, input);
+    return parseDecisionJson(textBlock.text);
 }
 
-function parseDecisionJson(raw: string, input: DecisionInput): Decision {
-    // The model is instructed to return strict JSON. Strip code fences if it added them.
+async function decideGroq(input: DecisionInput): Promise<Decision> {
+    const apiKey = process.env.GROQ_API_KEY!;
+    const model = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+    const userPrompt = buildUserPrompt(input);
+
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            authorization: `Bearer ${apiKey}`,
+            "content-type": "application/json",
+        },
+        body: JSON.stringify({
+            model,
+            max_tokens: 1024,
+            // OpenAI-compatible JSON mode — model must return valid JSON.
+            response_format: {type: "json_object"},
+            messages: [
+                {role: "system", content: SYSTEM_PROMPT},
+                {role: "user", content: userPrompt},
+            ],
+        }),
+        signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Groq HTTP ${res.status}: ${body.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as {choices?: {message?: {content?: string}}[]};
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error("Groq returned no message content");
+    return parseDecisionJson(text);
+}
+
+function parseDecisionJson(raw: string): Decision {
+    // Models are instructed to return strict JSON. Strip code fences if added.
     const cleaned = raw.replace(/^```(?:json)?\s*/m, "").replace(/```\s*$/m, "").trim();
     const obj = JSON.parse(cleaned);
     return {
@@ -65,7 +118,7 @@ function parseDecisionJson(raw: string, input: DecisionInput): Decision {
     };
 }
 
-/// Deterministic fallback used when ANTHROPIC_API_KEY is unset.
+/// Deterministic fallback used when neither provider has a key configured.
 /// Implements the same edge/confidence rules as the system prompt so smoke runs
 /// without external API calls still produce a credible decision.
 function mockDecide(input: DecisionInput): Decision {

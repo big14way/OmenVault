@@ -27,6 +27,7 @@ import {fileURLToPath} from "node:url";
 import {dirname, resolve as pathResolve} from "node:path";
 import {ethers} from "ethers";
 import {abis} from "@omenvault/shared/abis";
+import {pinJson} from "@omenvault/shared/ipfs";
 import {fetchAggregated, type OracleId} from "./datasources/index.js";
 import {parseQuestion, evaluate} from "./question.js";
 
@@ -143,6 +144,9 @@ export async function voteOnce(opts: VoteOnce): Promise<VoteResult> {
     async function submitVote(marketAddr: string, vote: Vote, reasoning: unknown): Promise<VoteResult> {
         const reasoningJson = JSON.stringify(reasoning);
         const reasoningHash = ethers.id(reasoningJson);
+        // Pin the reasoning blob first so we can write the real CID on chain.
+        // Falls back to a deterministic mock CID if Pinata is unset/unreachable.
+        const cid = await pinJson(reasoning, `omenvault-vote-${C.ORACLE_ID}-${marketAddr}`);
         // Contract: keccak256(abi.encode(market, vote, reasoningHash)).toEthSignedMessageHash()
         const digest = ethers.keccak256(
             ethers.AbiCoder.defaultAbiCoder().encode(
@@ -161,7 +165,6 @@ export async function voteOnce(opts: VoteOnce): Promise<VoteResult> {
             try {
                 const decisionLog = new ethers.Contract(C.DECISION_LOG, abis.DecisionLog as any, oracle);
                 // DecisionLog.Kind: 0=TRADE 1=ORACLE_VOTE 2=SIGNAL 3=OTHER
-                const cid = `ipfs://mock/${reasoningHash}`; // TODO(team): pin reasoning JSON
                 const logTx = await decisionLog.logDecision(myAgentId, 1, reasoningHash, cid, {nonce: nonce++});
                 await logTx.wait();
             } catch (e: any) {
