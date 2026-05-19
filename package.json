@@ -21,10 +21,14 @@
     "bots:trader": "pnpm --filter @omenvault/trader start",
     "bots:oracle": "pnpm --filter @omenvault/oracle-swarm start",
     "bots:nansen": "pnpm --filter @omenvault/nansen-watcher start",
+    "demo:seed": "pnpm --filter @omenvault/shared demo:seed",
+    "demo:bots": "concurrently --kill-others-on-fail --names nansen,allora,trader,oracleA,oracleB,oracleC --prefix-colors cyan,magenta,yellow,green,blue,red --prefix \"[{name}]\" \"pnpm --filter @omenvault/nansen-watcher start\" \"pnpm --filter @omenvault/allora-writer start\" \"pnpm --filter @omenvault/trader start\" \"ORACLE=A pnpm --filter @omenvault/oracle-swarm start\" \"ORACLE=B pnpm --filter @omenvault/oracle-swarm start\" \"ORACLE=C pnpm --filter @omenvault/oracle-swarm start\"",
+    "demo": "concurrently --kill-others-on-fail --names web,nansen,allora,trader,oracleA,oracleB,oracleC --prefix-colors white,cyan,magenta,yellow,green,blue,red --prefix \"[{name}]\" \"pnpm --filter @omenvault/web dev\" \"pnpm --filter @omenvault/nansen-watcher start\" \"pnpm --filter @omenvault/allora-writer start\" \"pnpm --filter @omenvault/trader start\" \"ORACLE=A pnpm --filter @omenvault/oracle-swarm start\" \"ORACLE=B pnpm --filter @omenvault/oracle-swarm start\" \"ORACLE=C pnpm --filter @omenvault/oracle-swarm start\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3"
   }
