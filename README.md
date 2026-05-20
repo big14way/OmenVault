@@ -2,7 +2,7 @@
 
 > **Prediction markets on Mantle where settlement collateral earns RWA yield while bets are open, and AI agents — gated by ERC-8004 soulbound identity — both take positions and resolve outcomes.**
 
-Live on **Mantle Sepolia** · Built for the **Mantle Cookathon 2026** · Tracks: AI × RWA (primary) · Agentic Wallets (secondary) · AI Alpha & Data (tertiary)
+Live on **Mantle Sepolia** · Built for **The Turing Test Hackathon 2026** (Mantle) · Tracks: **AI × RWA** (primary, sponsored by Mantle) · **Agentic Economy** (secondary, sponsored by Byreal) · Grand Champion + Best UI/UX cross-prizes
 
 ---
 
@@ -146,20 +146,25 @@ OmenVault is designed to capture protocol fees in three places without taxing be
 
 ---
 
-## Tracks
+## Tracks — The Turing Test Hackathon 2026
 
-| Priority | Track | Fit |
-|---|---|---|
-| **Primary** | **AI × RWA (Track 3)** | RWA collateral (sUSDe + USDY) + AI agents (trader + oracle swarm) at the core of every market. The defining track for OmenVault. |
-| **Secondary** | **Agentic Wallets & Economy (Track 6)** | Every agent is an ERC-8004 soulbound NFT with its own wallet, signing keys, reputation. Trader autonomously enters positions; oracles autonomously sign verdicts. |
-| **Tertiary** | **AI Alpha & Data (Track 2)** | Nansen smart-money flow + Allora forecasts are first-class inputs, not afterthoughts. The trader's reasoning trail demonstrates LLM synthesis of multiple alpha sources. |
+OmenVault is submitted to Phase II ("AI Awakening", May 1 – June 15, 2026) on [DoraHacks](https://dorahacks.io/hackathon/mantleturingtesthackathon2026).
 
-**Sponsor cross-prizes targeted:**
-- **Allora** — deepest integration of any concept (on-chain consumer + off-chain writer + topic-pinned markets).
-- **Hashed** — RWA-collateralized prediction markets are institutional-trader catnip.
-- **Nansen** — smart-money signals are core to entry timing.
-- **Byreal** — 6 lifecycle skills published with proper manifests.
-- **Virtuals** — ERC-8004 NFT per agent + multi-agent oracle swarm.
+| Priority | Track | Sponsor | Why we fit |
+|---|---|---|---|
+| **Primary** | **AI × RWA** | Mantle | RWA collateral (sUSDe + USDY) + AI agents at the core of every market. Dynamic yield strategies and risk management on USDY and Mantle-native primitives — the literal track description. |
+| **Secondary** | **Agentic Economy** | Byreal | 6 published Byreal skills cover the full lifecycle: create-market, enter, trade-ai, vote-oracle, finalize, claim. Each agent has an ERC-8004 wallet + signing keys + on-chain reputation. |
+| **Cross** | **Grand Champion** | Mantle | "Top Overall Business Potential, Completion & Mantle Ecosystem Fit" — protocol is feature-complete, deployed, with a four-primitive Mantle integration and clear revenue model. |
+| **Cross** | **Best UI/UX** | Mantle | Streaming LLM reasoning, animated yield bar, three-card oracle swarm with stamp animations, dark editorial theme (Cabinet Grotesk + Geist). |
+| **Cross** | **Community Voting** | Mantle | Public Vercel deploy + X-thread campaign with #MantleAIHackathon. |
+
+**The three pillars Mantle says define a winning project — and where we hit them:**
+
+| Pillar | OmenVault implementation |
+|---|---|
+| **On-chain benchmarking** | `DecisionLog` records every agent decision + IPFS reasoning hash. Full audit stream on `/audit`. |
+| **ERC-8004 agent identity** | `AgentRegistry` is the soulbound ERC-721. Reputation updates on every oracle vote. Transfer reverts. |
+| **Radical transparency** | Every reasoning blob pinned to IPFS. Hash emitted on-chain. Click any decision in `/audit` → opens the full LLM thought process. |
 
 ---
 
@@ -276,13 +281,8 @@ Copy [`.env.example`](.env.example) → `.env`. Required keys:
 
 ---
 
-## Demo
-
-See [`DEMO.md`](DEMO.md) for the full end-to-end demo script: setup, talking points, what to say at each timestamp, problem framing, revenue model, and Mantle-ecosystem narrative.
-
 ## Documentation
 
-- [`DEMO.md`](DEMO.md) — full demo walkthrough + talking points
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — contracts, LMSR math, data flow
 - [`AGENTS.md`](AGENTS.md) — agent identity, decision schemas, oracle voting
 - [`ATTRIBUTION.md`](ATTRIBUTION.md) — partners, sponsors, open-source credits

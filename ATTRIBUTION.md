@@ -1,6 +1,6 @@
 # Attribution
 
-OmenVault was built for the Mantle Cookathon 2026.
+OmenVault was built for **The Turing Test Hackathon 2026** (Mantle) — Phase II "AI Awakening", May 1 – June 15, 2026.
 
 ## Partner integrations
 
@@ -25,4 +25,4 @@ OmenVault was built for the Mantle Cookathon 2026.
 
 ## Hackathon
 
-Built by the OmenVault team during the Mantle Cookathon. Track: AI x RWA (primary), Agentic Wallets & Economy (secondary), AI Alpha & Data (tertiary).
+Built by the OmenVault team. Tracks: **AI × RWA** (primary, sponsored by Mantle), **Agentic Economy** (secondary, sponsored by Byreal). Submitted to [DoraHacks](https://dorahacks.io/hackathon/mantleturingtesthackathon2026).
