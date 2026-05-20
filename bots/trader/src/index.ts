@@ -192,20 +192,44 @@ export async function runTraderOnce(opts: RunOptions): Promise<RunResult> {
 }
 
 async function main() {
-    const argMarket = process.argv[2];
-    if (!argMarket) {
-        console.error("usage: trader <marketAddr> [--dry-run]");
-        console.error("   or: TRADER_LOOP=1 trader <marketAddr> [<marketAddr> ...]");
-        process.exit(2);
-    }
     const dryRun = process.argv.includes("--dry-run");
+    const cliMarkets = process.argv.slice(2).filter((a) => a.startsWith("0x"));
+    const argMarket = cliMarkets[0];
 
-    if (process.env.TRADER_LOOP) {
-        const markets = process.argv.slice(2).filter((a) => a.startsWith("0x"));
-        const pollMs = cfg().POLL_INTERVAL_MS;
-        console.log(`[trader] loop mode, polling ${markets.length} market(s) every ${pollMs}ms`);
+    // Loop mode: explicit (TRADER_LOOP=1), or implicit when no market is passed
+    // on the CLI. Auto-discovers open markets via MarketFactory.allMarkets() so
+    // `pnpm demo` can boot the trader without first capturing the seed output.
+    const loopMode = process.env.TRADER_LOOP || cliMarkets.length === 0;
+
+    if (loopMode) {
+        const C = cfg();
+        const provider = new ethers.JsonRpcProvider(C.RPC_URL, undefined, {batchMaxCount: 1});
+        const factoryAddr = process.env.MARKET_FACTORY_ADDRESS;
+        if (cliMarkets.length === 0 && !factoryAddr) {
+            console.error("trader: no markets passed and MARKET_FACTORY_ADDRESS unset");
+            process.exit(2);
+        }
+        const factory = factoryAddr
+            ? new ethers.Contract(factoryAddr, abis.MarketFactory as any, provider)
+            : null;
+        const pollMs = C.POLL_INTERVAL_MS;
+        console.log(
+            `[trader] loop mode, polling every ${pollMs}ms ` +
+                (cliMarkets.length ? `(${cliMarkets.length} pinned market(s))` : "(auto-discover from factory)"),
+        );
         // eslint-disable-next-line no-constant-condition
         while (true) {
+            let markets = cliMarkets;
+            if (factory && markets.length === 0) {
+                try {
+                    const len: bigint = await factory.marketsLength();
+                    const discovered: string[] = [];
+                    for (let i = 0n; i < len; i++) discovered.push(await factory.allMarkets(i));
+                    markets = discovered;
+                } catch (e: any) {
+                    console.error("[trader] factory enumerate error:", e.shortMessage ?? e.message);
+                }
+            }
             for (const m of markets) {
                 try {
                     await runTraderOnce({marketAddr: m, dryRun});

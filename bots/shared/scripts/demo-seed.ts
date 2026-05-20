@@ -24,11 +24,11 @@ import {fileURLToPath} from "node:url";
 import {dirname, resolve as pathResolve} from "node:path";
 import {ethers} from "ethers";
 import {abis} from "../src/abis/index.js";
+import {provider as resilientProvider} from "../src/rpc.js";
 
 const __dirname_ = dirname(fileURLToPath(import.meta.url));
 dotenvConfig({path: pathResolve(__dirname_, "../../../.env"), override: true});
 
-const RPC_URL = process.env.RPC_URL ?? process.env.MANTLE_SEPOLIA_RPC_URL ?? "http://localhost:8545";
 const ADMIN_PK = process.env.PRIVATE_KEY!;
 const TRADER_PK = process.env.TRADER_PRIVATE_KEY;
 
@@ -64,10 +64,10 @@ async function main() {
     }
     if (!ADMIN_PK) throw new Error("PRIVATE_KEY not set");
 
-    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, {batchMaxCount: 1});
+    const provider = resilientProvider();
     const admin = new ethers.Wallet(ADMIN_PK, provider);
     const adminAddr = await admin.getAddress();
-    console.log(`demo-seed: rpc=${RPC_URL} admin=${adminAddr}`);
+    console.log(`demo-seed: admin=${adminAddr}`);
 
     const usdt0 = new ethers.Contract(ADDRS.usdt0, abis.MockUSDT0 as any, admin);
     const factory = new ethers.Contract(ADDRS.factory, abis.MarketFactory as any, admin);
@@ -127,9 +127,7 @@ async function main() {
     console.log(`market URL: /markets/${marketAddr}`);
     console.log(`audit URL:  /audit`);
     console.log(`swarm URL:  /swarm`);
-    if (RPC_URL.includes("mantle")) {
-        console.log(`explorer:   https://explorer.sepolia.mantle.xyz/address/${marketAddr}`);
-    }
+    console.log(`explorer:   https://explorer.sepolia.mantle.xyz/address/${marketAddr}`);
     console.log("");
     console.log("Now start the bots in separate terminals:");
     console.log("  pnpm -F @omenvault/nansen-watcher start    # local Nansen signal cache");
