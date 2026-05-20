@@ -52,3 +52,6 @@ next-env.d.ts
 *.pem
 .turbo/
 .cache/
+
+# Local-only docs (demo playbook stays off GitHub)
+DEMO.md

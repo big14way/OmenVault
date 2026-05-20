@@ -11,6 +11,20 @@ import {dirname, resolve as pathResolve} from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 dotenvConfig({path: pathResolve(here, "../../../.env"), override: true});
 
+// Node 18+ terminates the process on unhandledRejection by default. The
+// ethers FallbackProvider occasionally lets a "loser" sibling's rejection
+// (e.g. one RPC times out while the other returns) escape its handler chain,
+// which would crash a long-running bot on any transient network blip. Log
+// and keep running — the bot's own per-cycle catches still handle real errors.
+let safetyInstalled = false;
+if (!safetyInstalled) {
+    safetyInstalled = true;
+    process.on("unhandledRejection", (reason) => {
+        const msg = (reason as Error)?.message ?? String(reason);
+        console.error("[shared] swallowed unhandledRejection:", msg);
+    });
+}
+
 export function requireEnv(name: string): string {
     const v = process.env[name];
     if (!v) throw new Error(`Missing required env var: ${name}`);
