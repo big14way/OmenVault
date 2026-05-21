@@ -66,21 +66,6 @@ export function Hero() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
                     {/* LEFT — Editorial headline */}
                     <div className="lg:col-span-7">
-                        <motion.div
-                            initial={{opacity: 0, y: 12}}
-                            animate={{opacity: 1, y: 0}}
-                            transition={{duration: 0.7, ease: [0.22, 1, 0.36, 1]}}
-                            className="inline-flex items-center gap-2 mb-7"
-                        >
-                            <span className="font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute">
-                                Mantle Cookathon &lsquo;26
-                            </span>
-                            <span className="h-px w-8 bg-border-strong" />
-                            <span className="font-mono text-[10px] uppercase tracking-eyebrow text-amber">
-                                AI × RWA
-                            </span>
-                        </motion.div>
-
                         <motion.h1
                             initial={{opacity: 0, y: 16}}
                             animate={{opacity: 1, y: 0}}
