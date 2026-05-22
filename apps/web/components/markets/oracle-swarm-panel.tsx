@@ -227,15 +227,17 @@ function OracleCard({vote, index}: {vote: OracleVote; index: number}) {
             </motion.div>
 
             {/* IPFS link */}
-            <a
-                href={`https://ipfs.io/ipfs/${vote.ipfsHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
-            >
-                <ArrowSquareOut size={11} weight="regular" />
-                Reasoning ↗
-            </a>
+            {vote.ipfsHash && (
+                <a
+                    href={`https://gateway.pinata.cloud/ipfs/${vote.ipfsHash.replace(/^ipfs:\/\//, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
+                >
+                    <ArrowSquareOut size={11} weight="regular" />
+                    Reasoning ↗
+                </a>
+            )}
         </motion.article>
     );
 }

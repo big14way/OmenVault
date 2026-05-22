@@ -21,7 +21,12 @@
  * uses at most one per cache refresh window.
  */
 
-import "dotenv/config";
+// Side-effect import: @omenvault/shared/env loads the repo-root .env regardless
+// of which workspace package's CWD we're running under. The plain `dotenv/config`
+// looks at process.cwd() (= bots/nansen-watcher/ when started via pnpm --filter),
+// which has no .env, so NANSEN_API_KEY would silently come back "" and the
+// watcher would fall back to demo mode.
+import "@omenvault/shared/env";
 import http from "node:http";
 
 const PORT = Number(process.env.NANSEN_WATCHER_PORT ?? 7755);

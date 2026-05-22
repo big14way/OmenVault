@@ -47,8 +47,15 @@ function chooseProvider(): Provider {
 
 export async function decide(input: DecisionInput): Promise<Decision> {
     const provider = chooseProvider();
-    if (provider === "groq") return decideGroq(input);
-    if (provider === "anthropic") return decideAnthropic(input);
+    // Fall through to the heuristic if the live provider errors (rate limits,
+    // network blips, quota exhaustion) so the trader keeps producing decisions
+    // and the on-chain reasoning trail stays alive.
+    try {
+        if (provider === "groq") return await decideGroq(input);
+        if (provider === "anthropic") return await decideAnthropic(input);
+    } catch (e: any) {
+        console.warn(`[trader] LLM ${provider} failed (${e.shortMessage ?? e.message?.slice(0, 100)}) — falling back to heuristic`);
+    }
     return mockDecide(input);
 }
 

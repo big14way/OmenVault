@@ -207,17 +207,30 @@ export function AgentDecisionRow({decision}: Props) {
                                 </pre>
                             )}
 
-                            {decision.payload.ipfsHash && (
-                                <a
-                                    href={`https://ipfs.io/ipfs/${decision.payload.ipfsHash}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="mt-3 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
-                                >
-                                    <ArrowSquareOut size={11} weight="regular" />
-                                    ipfs://{decision.payload.ipfsHash.slice(0, 12)}…
-                                </a>
-                            )}
+                            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                {decision.payload.ipfsHash && (
+                                    <a
+                                        href={`https://gateway.pinata.cloud/ipfs/${decision.payload.ipfsHash.replace(/^ipfs:\/\//, "")}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
+                                    >
+                                        <ArrowSquareOut size={11} weight="regular" />
+                                        ipfs://{decision.payload.ipfsHash.replace(/^ipfs:\/\//, "").slice(0, 12)}…
+                                    </a>
+                                )}
+                                {decision.txHash && (
+                                    <a
+                                        href={`https://sepolia.mantlescan.xyz/tx/${decision.txHash}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
+                                    >
+                                        <ArrowSquareOut size={11} weight="regular" />
+                                        tx {decision.txHash.slice(0, 10)}…
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     </motion.div>
                 )}

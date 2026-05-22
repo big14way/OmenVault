@@ -181,13 +181,13 @@ export function AgentReasoningCard({
                                 {ipfsHash && (
                                     <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                                         <a
-                                            href={`https://ipfs.io/ipfs/${ipfsHash}`}
+                                            href={`https://gateway.pinata.cloud/ipfs/${ipfsHash.replace(/^ipfs:\/\//, "")}`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
                                         >
                                             <ArrowSquareOut size={11} weight="regular" />
-                                            ipfs://{ipfsHash.slice(0, 10)}…
+                                            ipfs://{ipfsHash.replace(/^ipfs:\/\//, "").slice(0, 10)}…
                                         </a>
                                     </div>
                                 )}

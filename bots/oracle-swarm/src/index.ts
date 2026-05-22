@@ -28,6 +28,7 @@ import {dirname, resolve as pathResolve} from "node:path";
 import {ethers} from "ethers";
 import {abis} from "@omenvault/shared/abis";
 import {pinJson} from "@omenvault/shared/ipfs";
+import {provider as resilientProvider} from "@omenvault/shared/rpc";
 import {fetchAggregated, type OracleId} from "./datasources/index.js";
 import {parseQuestion, evaluate} from "./question.js";
 
@@ -68,7 +69,7 @@ export interface VoteOnce {
 
 export async function voteOnce(opts: VoteOnce): Promise<VoteResult> {
     const C = cfg();
-    const provider = new ethers.JsonRpcProvider(C.RPC_URL, undefined, {batchMaxCount: 1});
+    const provider = resilientProvider();
     const oracle = new ethers.Wallet(C.ORACLE_PK, provider);
     const oracleAddr = await oracle.getAddress();
 
@@ -180,7 +181,7 @@ export async function voteOnce(opts: VoteOnce): Promise<VoteResult> {
 /// and we haven't voted on yet.
 async function loop() {
     const C = cfg();
-    const provider = new ethers.JsonRpcProvider(C.RPC_URL, undefined, {batchMaxCount: 1});
+    const provider = resilientProvider();
     const factory = new ethers.Contract(C.FACTORY, abis.MarketFactory as any, provider);
 
     console.log(`[oracle-${C.ORACLE_ID}] loop mode, polling every ${C.POLL_INTERVAL_MS}ms`);

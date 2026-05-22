@@ -135,13 +135,13 @@ function DrawerBody({decision, onClose}: {decision: Decision; onClose: () => voi
                                 </p>
                             </div>
                             <a
-                                href={`https://ipfs.io/ipfs/${decision.payload.ipfsHash}`}
+                                href={`https://gateway.pinata.cloud/ipfs/${decision.payload.ipfsHash.replace(/^ipfs:\/\//, "")}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="mt-3 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-eyebrow text-fg-mute hover:text-amber"
                             >
                                 <ArrowSquareOut size={11} weight="regular" />
-                                ipfs://{decision.payload.ipfsHash.slice(0, 14)}…
+                                ipfs://{decision.payload.ipfsHash.replace(/^ipfs:\/\//, "").slice(0, 14)}…
                             </a>
                         </Section>
                     )}

@@ -18,11 +18,51 @@ import {deployment} from "@/lib/web3/config";
 export default function AgentProfilePage() {
     const params = useParams<{id: string}>();
     const agentId = parseInt(params.id, 10);
-    const {data: onChainAgents, isLoading: agentsLoading} = useAgents();
     const registryConfigured = Boolean(deployment.agentRegistry);
+
+    // All hooks must run unconditionally on every render — see Rules of Hooks.
+    // We resolve `agent` later (it can be undefined while the registry query
+    // is in-flight) and gate the actual UI on its presence below.
+    const {data: onChainAgents, isLoading: agentsLoading} = useAgents();
+    const {data: onChainDecisions} = useDecisions();
+    const {data: onChainMarkets} = useMarkets();
+
     const agent = registryConfigured
         ? onChainAgents?.find((a) => a.id === agentId)
         : onChainAgents?.find((a) => a.id === agentId) ?? findAgent(agentId);
+
+    const decisionsSource: Decision[] = registryConfigured
+        ? (onChainDecisions ?? [])
+        : MOCK_DECISIONS;
+    const decisions = useMemo(
+        () => decisionsSource.filter((d) => d.agentId === agentId).sort((a, b) => b.timestamp - a.timestamp),
+        [decisionsSource, agentId],
+    );
+
+    const marketSource = registryConfigured ? (onChainMarkets ?? []) : MOCK_MARKETS;
+
+    const marketsTouched = useMemo(
+        () => Array.from(new Set(decisions.map((d) => d.marketId).filter(Boolean))) as string[],
+        [decisions]
+    );
+
+    // For Traders/Bettors, "active positions" ≈ recent ENTER decisions on
+    // unresolved markets that haven't been followed by a CLAIM by this agent.
+    // Pass agent?.type so the memo deps are stable even when agent is still loading.
+    const agentType = agent?.type;
+    const activePositions = useMemo(() => {
+        if (!agentType || agentType === "OracleNode") return [];
+        const claimedMarkets = new Set(
+            decisions.filter((d) => d.kind === "CLAIM").map((d) => d.marketId)
+        );
+        const enters = decisions.filter((d) => d.kind === "ENTER" && !claimedMarkets.has(d.marketId));
+        // Deduplicate per market — keep the most recent
+        const byMarket = new Map<string, Decision>();
+        enters.forEach((d) => {
+            if (d.marketId && !byMarket.has(d.marketId)) byMarket.set(d.marketId, d);
+        });
+        return Array.from(byMarket.values());
+    }, [decisions, agentType]);
 
     if (!agent || isNaN(agentId)) {
         if (registryConfigured && agentsLoading) {
@@ -36,42 +76,6 @@ export default function AgentProfilePage() {
         }
         notFound();
     }
-
-    // Chain-derived decisions filtered for this agent. Falls back to mocks only
-    // pre-deploy. Chain rows carry an ipfsCid pointer that the row component can
-    // expand on click to fetch full reasoning.
-    const {data: onChainDecisions} = useDecisions();
-    const decisionsSource: Decision[] = registryConfigured
-        ? (onChainDecisions ?? [])
-        : MOCK_DECISIONS;
-    const decisions = useMemo(
-        () => decisionsSource.filter((d) => d.agentId === agentId).sort((a, b) => b.timestamp - a.timestamp),
-        [decisionsSource, agentId],
-    );
-
-    const {data: onChainMarkets} = useMarkets();
-    const marketSource = registryConfigured ? (onChainMarkets ?? []) : MOCK_MARKETS;
-
-    const marketsTouched = useMemo(
-        () => Array.from(new Set(decisions.map((d) => d.marketId).filter(Boolean))) as string[],
-        [decisions]
-    );
-
-    // For Traders/Bettors, "active positions" ≈ recent ENTER decisions on
-    // unresolved markets that haven't been followed by a CLAIM by this agent.
-    const activePositions = useMemo(() => {
-        if (agent.type === "OracleNode") return [];
-        const claimedMarkets = new Set(
-            decisions.filter((d) => d.kind === "CLAIM").map((d) => d.marketId)
-        );
-        const enters = decisions.filter((d) => d.kind === "ENTER" && !claimedMarkets.has(d.marketId));
-        // Deduplicate per market — keep the most recent
-        const byMarket = new Map<string, Decision>();
-        enters.forEach((d) => {
-            if (d.marketId && !byMarket.has(d.marketId)) byMarket.set(d.marketId, d);
-        });
-        return Array.from(byMarket.values());
-    }, [decisions, agent.type]);
 
     return (
         <main className="relative flex-1 flex flex-col pb-24">
