@@ -19,6 +19,8 @@ import {
 } from "@/lib/mock-data";
 import {TIER_APY} from "@/lib/types";
 import {useMarket} from "@/lib/web3/hooks/use-market";
+import {useForecasts} from "@/lib/web3/hooks/use-forecasts";
+import {useNansenSignal} from "@/lib/web3/hooks/use-nansen-signal";
 import {deployment} from "@/lib/web3/config";
 import {ResolvePanel} from "@/components/markets/resolve-panel";
 import {usePosition} from "@/lib/web3/hooks/use-position";
@@ -40,6 +42,11 @@ export default function MarketDetailPage() {
     const factoryConfigured = Boolean(deployment.marketFactory);
     const market = factoryConfigured ? onChainMarket : (onChainMarket ?? findMarket(id));
     const {data: onChainPosition} = usePosition(id);
+
+    // Hooks must run on every render (Rules of Hooks), so call them before any
+    // early return. Both gracefully no-op when their underlying data is missing.
+    const {data: forecasts} = useForecasts();
+    const {data: nansenSignal} = useNansenSignal(deployment.usdt0);
 
     const [tab, setTab] = useState<"activity" | "stats" | "allora" | "nansen">("activity");
 
@@ -230,26 +237,62 @@ export default function MarketDetailPage() {
                                 </div>
                             )}
                             {tab === "stats" && <StatsTab market={market} />}
-                            {tab === "allora" && (
-                                <SignalPanel
-                                    title="Allora forecast"
-                                    eyebrow="Topic stream"
-                                    body={
-                                        market.alloraTopicId
-                                            ? "Live forecast bound to this market on creation. Trader agents read this signal at every poll cycle and size positions against the LMSR price."
-                                            : "No Allora topic linked to this market."
-                                    }
-                                    figure={market.alloraTopicId ? "62%" : "—"}
-                                    figureLabel={market.alloraTopicId ? "P(YES) · last poll" : "—"}
-                                />
-                            )}
+                            {tab === "allora" && (() => {
+                                // Latest on-chain forecast matching this market's bound topic.
+                                const latest = market.alloraTopicId
+                                    ? forecasts?.find((f) => {
+                                          try {
+                                              return BigInt(f.topicIdRaw) === BigInt(market.alloraTopicId!);
+                                          } catch {
+                                              return false;
+                                          }
+                                      })
+                                    : undefined;
+                                return (
+                                    <SignalPanel
+                                        title="Allora forecast"
+                                        eyebrow={latest ? `Topic stream · live (${latest.topicLabel})` : "Topic stream"}
+                                        body={
+                                            !market.alloraTopicId
+                                                ? "No Allora topic linked to this market."
+                                                : latest
+                                                  ? `Live forecast bound to this market on creation. Last written ${new Date(latest.timestampSec * 1000).toLocaleTimeString()} by ${latest.attestor.slice(0, 10)}…. Trader agents read this signal every poll cycle and size positions against the LMSR price.`
+                                                  : "Allora topic bound on creation. Waiting for the first on-chain ForecastWritten event from the allora-writer bot."
+                                        }
+                                        figure={
+                                            !market.alloraTopicId
+                                                ? "—"
+                                                : latest
+                                                  ? `${(latest.valueFloat * 100).toFixed(0)}%`
+                                                  : "…"
+                                        }
+                                        figureLabel={latest ? "P(YES) · last on-chain write" : "—"}
+                                    />
+                                );
+                            })()}
                             {tab === "nansen" && (
                                 <SignalPanel
                                     title="Smart-money flow"
-                                    eyebrow="Nansen netflow"
-                                    body="Smart-money wallets accumulating the underlying asset are tracked off-chain by the nansen-watcher bot and surfaced to traders as a real-time signal. Returns neutral when no API key configured."
-                                    figure="3"
-                                    figureLabel="Wallets long this week"
+                                    eyebrow={
+                                        nansenSignal
+                                            ? `Nansen netflow · live (${nansenSignal.source})`
+                                            : "Nansen netflow"
+                                    }
+                                    body={
+                                        nansenSignal
+                                            ? `Smart-money wallets are tracked off-chain by the nansen-watcher service and surfaced to traders as a real-time signal. Cache refreshed ${new Date(nansenSignal.lastUpdated * 1000).toLocaleTimeString()}.`
+                                            : "Smart-money wallets accumulating the underlying asset are tracked off-chain by the nansen-watcher bot and surfaced to traders. Currently no watcher reachable from the web app (set NEXT_PUBLIC_NANSEN_WATCHER_URL if it's not on localhost:7755)."
+                                    }
+                                    figure={
+                                        nansenSignal
+                                            ? `${nansenSignal.yesCount > 0 ? "+" : ""}${nansenSignal.yesCount - nansenSignal.noCount}`
+                                            : "—"
+                                    }
+                                    figureLabel={
+                                        nansenSignal
+                                            ? `${nansenSignal.yesCount} long · ${nansenSignal.noCount} short`
+                                            : "—"
+                                    }
                                 />
                             )}
                         </div>

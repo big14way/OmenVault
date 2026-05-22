@@ -10,6 +10,7 @@ export {usePortfolio, type PortfolioEntry} from "./use-portfolio";
 export {useUsdt0Balance, useFaucet} from "./use-usdt0";
 export {useAgentHeartbeats, type AgentHeartbeat} from "./use-agent-heartbeats";
 export {useForecasts, type ForecastEntry} from "./use-forecasts";
+export {useNansenSignal, type NansenSignal} from "./use-nansen-signal";
 export {useIpfsJson, type IpfsReasoning} from "./use-ipfs";
 export {useResolution, useFinalize, type ResolutionView} from "./use-resolution";
 export {useSubmitVote, type SubmitVoteParams} from "./use-submit-vote";
