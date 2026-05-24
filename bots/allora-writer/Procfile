@@ -1,0 +1,1 @@
+worker: pnpm --filter @omenvault/allora-writer start

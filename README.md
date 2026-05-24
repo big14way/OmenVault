@@ -2,7 +2,13 @@
 
 > **Prediction markets on Mantle where settlement collateral earns RWA yield while bets are open, and AI agents — gated by ERC-8004 soulbound identity — both take positions and resolve outcomes.**
 
-Live on **Mantle Sepolia** · Built for **The Turing Test Hackathon 2026** (Mantle) · Tracks: **AI × RWA** (primary, sponsored by Mantle) · **Agentic Economy** (secondary, sponsored by Byreal) · Grand Champion + Best UI/UX cross-prizes
+[![Demo video](https://img.shields.io/badge/Demo-YouTube-FF0000?logo=youtube&logoColor=white)](https://youtu.be/tSnD3tq9oSw)
+[![Live app](https://img.shields.io/badge/Live-omenvault.vercel.app-000000?logo=vercel&logoColor=white)](https://omenvault.vercel.app)
+[![Mantle Sepolia](https://img.shields.io/badge/Mantle_Sepolia-deployed-1B5E3F)](https://sepolia.mantlescan.xyz/address/0x3C343AD077983371b29fee386bdBC8a92E934C51)
+
+🎬 **2:45 walkthrough — [youtu.be/tSnD3tq9oSw](https://youtu.be/tSnD3tq9oSw)** · 🌐 **Live app — [omenvault.vercel.app](https://omenvault.vercel.app)** · 📦 **Source — this repo**
+
+Built for **The Turing Test Hackathon 2026** (Mantle, [DoraHacks](https://dorahacks.io/hackathon/mantleturingtesthackathon2026)) · Tracks: **AI × RWA** (primary, sponsored by Mantle) · **Agentic Economy** (secondary, sponsored by Byreal) · Grand Champion + Best UI/UX + Community Voting cross-prizes
 
 ---
 
@@ -127,6 +133,78 @@ OmenVault doesn't *use* Mantle — it's composed of Mantle primitives.
 - **Nansen Watcher** — smart-money flow signal for the trader.
 
 Full deep-dive: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Agent details: [`AGENTS.md`](AGENTS.md).
+
+---
+
+## Target market
+
+OmenVault is built for three audiences that prediction markets currently fail.
+
+### 1. Long-horizon retail bettors ($5–50k tickets)
+
+Anyone who's ever wanted to take a 90-day or 180-day position on an election, a regulatory decision, or a quarterly macro outcome — and balked at the dead-money cost. At a 5% RWA tier on a 90-day market, OmenVault returns roughly **1.25% more capital** than any other prediction market, regardless of outcome. For the bettor, that's the difference between a positive-EV market and a marginal one.
+
+**Acquisition channel:** crypto-native Twitter/X, prediction-market subreddits, Allora and Nansen audiences (their dashboards lead users directly into our markets).
+
+### 2. Quant desks running directional AI agents ($50k–5M)
+
+The Turing Test Hackathon's organizing thesis — that on-chain agents are about to compete with humans on capital allocation — is OmenVault's exact wedge. Every agent on OmenVault is an ERC-8004 soulbound NFT with a permanent on-chain track record: win rate, sizing discipline, reasoning quality, oracle accuracy. **A quant desk can launch a strategy, build verifiable reputation, and have that reputation be portable across protocols** (ERC-8004 is the emerging cross-protocol identity standard).
+
+**Acquisition channel:** open-source the trader template (`bots/trader/`); make it forkable. Every new trader agent is sticky TVL for the protocol.
+
+### 3. Institutional treasuries hedging real exposure ($500k+)
+
+This is the v2 wedge. A DAO treasury holding $20M of stablecoins is already a Polymarket-shaped problem — they want to hedge governance outcomes, regulatory decisions, and macro tail risks, but Polymarket's collateral model means the hedge bleeds yield. OmenVault's RWA leg means a DAO can hedge a 180-day political risk **without losing 6% of treasury yield** to do it. That's the conversation we want to be having at year-end.
+
+**Acquisition channel:** direct outreach to DAO treasuries (Aave, Lido, Optimism Collective) and crypto-native funds; the cmETH premium tier on v2 (ETH-denominated markets) is the institutional unlock.
+
+### Market sizing (conservative)
+
+| Slice | Today | Year-1 capture (conservative) | Year-3 (with cmETH + institutional tier) |
+|---|---|---|---|
+| Crypto prediction-market open interest | ~$400M (Polymarket + Limitless + Azuro combined) | $20M | $200M |
+| Tokenized RWA TVL on Mantle | ~$80M (Q1 2026, growing) | $40M sticky | $400M sticky |
+| ERC-8004 agent economy | nascent | 50 registered trader agents | 5,000+ |
+
+A 5% take of the crypto prediction-market TAM in year 3 — combined with the RWA TVL pulled onto Mantle as a side effect — is the bull case. The bear case (10% of that) still moves the needle for Mantle's RWA-TVL story.
+
+---
+
+## Roadmap
+
+OmenVault ships in three phases. The hackathon submission is v1.0.
+
+### v1.0 — **The Turing Test Hackathon 2026 submission** (shipped)
+
+- ✅ 7 core contracts on Mantle Sepolia (LMSR, soulbound agents, oracle swarm, vault rotation)
+- ✅ Trader agent with LLM signal synthesis (Allora + Nansen + market price)
+- ✅ 3-agent oracle swarm with disjoint data sources + reputation updates
+- ✅ Full Next.js app — 10 routes, wagmi wallet integration, streaming reasoning UI
+- ✅ 6 Byreal skills covering the full market lifecycle
+- ✅ 33 passing Foundry tests + invariant suite
+
+### v1.1 — **Polish + missing pieces** (June 2026, post-hackathon)
+
+- `Market.exit()` — pre-resolution exit with 1% LMSR fee (in current contracts as optional)
+- Mainnet token swap: USDT0, real sUSDe, real USDY (one-line constructor change in `Deploy.s.sol`)
+- WalletConnect v2 + Coinbase Wallet + Safe wallet support for institutional users
+- Fill the 5 remaining oracle/invariant test stubs
+- Allora "binary outcome probability" topic proposal (deeper integration than ETH/USD topic 14)
+
+### v2.0 — **cmETH premium tier + institutional onboarding** (Q3 2026)
+
+- **cmETH collateral tier** for ETH-denominated markets — yield-on-yield via Mantle's restaking primitive
+- **Permissioned market templates** for DAO treasuries (whitelisted creators, larger min stakes, longer resolution windows)
+- **Reputation-weighted oracle staking** — oracles bond capital that slashes on minority votes
+- **Caladan-style market-making LP pool** — programmatic counterparty for thin markets
+- **Allora topic v2** — proposal for a native "prediction-market probability" topic
+
+### v3.0 — **Cross-chain agent identity + secondary markets** (2027)
+
+- ERC-8004 identity portability — trader reputation usable across Mantle, Base, Hyperliquid
+- Secondary markets on outstanding positions (LMSR LP token transferability)
+- Subscription-based agent following (copy-trade an ERC-8004 trader, fee accrues to that NFT)
+- Mobile app (React Native) with one-tap position UX
 
 ---
 
@@ -283,6 +361,7 @@ Copy [`.env.example`](.env.example) → `.env`. Required keys:
 
 ## Documentation
 
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — step-by-step Vercel (web) + Railway (bots) deploy guide
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — contracts, LMSR math, data flow
 - [`AGENTS.md`](AGENTS.md) — agent identity, decision schemas, oracle voting
 - [`ATTRIBUTION.md`](ATTRIBUTION.md) — partners, sponsors, open-source credits

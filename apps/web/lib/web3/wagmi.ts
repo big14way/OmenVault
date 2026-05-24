@@ -4,7 +4,7 @@
  */
 
 import {http, createConfig, fallback} from "wagmi";
-import {injected} from "wagmi/connectors";
+import {injected, walletConnect, coinbaseWallet} from "wagmi/connectors";
 import {mantleSepoliaTestnet} from "viem/chains";
 import {activeChain, anvilChain, rpcUrl} from "./config";
 
@@ -24,10 +24,35 @@ const mantleTransport = fallback(
     {rank: false},
 );
 
+const walletConnectProjectId =
+    process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() || "";
+
+const connectors = [
+    injected({shimDisconnect: true}),
+    coinbaseWallet({appName: "OmenVault", appLogoUrl: "/icon.png"}),
+    // Only register WalletConnect when a Project ID is configured — calling
+    // the connector with an empty ID throws inside the WC client at runtime.
+    ...(walletConnectProjectId
+        ? [
+              walletConnect({
+                  projectId: walletConnectProjectId,
+                  metadata: {
+                      name: "OmenVault",
+                      description:
+                          "Prediction markets on Mantle where collateral earns RWA yield while bets are open.",
+                      url: "https://omenvault.vercel.app",
+                      icons: ["https://omenvault.vercel.app/icon.png"],
+                  },
+                  showQrModal: true,
+              }),
+          ]
+        : []),
+];
+
 const isMantle = activeChain.id === 5003;
 export const wagmiConfig = createConfig({
     chains: [anvilChain, mantleSepoliaTestnet],
-    connectors: [injected()],
+    connectors,
     transports: {
         31337: isMantle ? http() : http(rpcUrl),
         5003: isMantle ? mantleTransport : http(),
