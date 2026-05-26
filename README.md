@@ -4,6 +4,7 @@
 
 [![Demo video](https://img.shields.io/badge/Demo-YouTube-FF0000?logo=youtube&logoColor=white)](https://youtu.be/tSnD3tq9oSw)
 [![Live app](https://img.shields.io/badge/Live-omenvault.vercel.app-000000?logo=vercel&logoColor=white)](https://omenvault.vercel.app)
+[![Mantle Mainnet](https://img.shields.io/badge/Mantle_Mainnet-deployed-000000)](https://mantlescan.xyz/address/0x0e26f1B03513DF3cEeC4617F7D0946E243b4F514)
 [![Mantle Sepolia](https://img.shields.io/badge/Mantle_Sepolia-deployed-1B5E3F)](https://sepolia.mantlescan.xyz/address/0x3C343AD077983371b29fee386bdBC8a92E934C51)
 
 🎬 **2:45 walkthrough — [youtu.be/tSnD3tq9oSw](https://youtu.be/tSnD3tq9oSw)** · 🌐 **Live app — [omenvault.vercel.app](https://omenvault.vercel.app)** · 📦 **Source — this repo**
@@ -47,6 +48,25 @@ OmenVault treats the bet collateral as a yield-bearing asset for the entire life
 
 ---
 
+## Live on Mantle mainnet (chain id 5000)
+
+Deployer: [`0x53f51695A60C32537147DBf236ABEDC9B996C1D2`](https://mantlescan.xyz/address/0x53f51695A60C32537147DBf236ABEDC9B996C1D2) — deployed 2026-05-25. All contracts verified on Mantlescan.
+
+| Contract | Address |
+|---|---|
+| **MarketFactory** | [`0x0e26f1B03513DF3cEeC4617F7D0946E243b4F514`](https://mantlescan.xyz/address/0x0e26f1B03513DF3cEeC4617F7D0946E243b4F514) |
+| AgentRegistry | [`0x698Be1FAdB843168952c71A369be997E804fe29F`](https://mantlescan.xyz/address/0x698Be1FAdB843168952c71A369be997E804fe29F) |
+| OracleSwarm | [`0x8c07bD54577b2af4bF86923f13613b91d69eE5bf`](https://mantlescan.xyz/address/0x8c07bD54577b2af4bF86923f13613b91d69eE5bf) |
+| AlloraConsumer | [`0xfa9F66226D42aBd9d69089Fb9cacF7B9F0d1856F`](https://mantlescan.xyz/address/0xfa9F66226D42aBd9d69089Fb9cacF7B9F0d1856F) |
+| DecisionLog | [`0x04Dcf6c4d8cCBAac1eC9db4cf39b3a3D55cd0680`](https://mantlescan.xyz/address/0x04Dcf6c4d8cCBAac1eC9db4cf39b3a3D55cd0680) |
+| USDT0 (real, Mantle native) | [`0x779Ded0c9e1022225f8E0630b35a9b54bE713736`](https://mantlescan.xyz/address/0x779Ded0c9e1022225f8E0630b35a9b54bE713736) |
+| MockSUSDe | [`0xCb5B0098e9FF1377a639aD25FF59D00Ed3495c94`](https://mantlescan.xyz/address/0xCb5B0098e9FF1377a639aD25FF59D00Ed3495c94) |
+| MockUSDY | [`0x888D23980F22f0647923e0379F2b451389988ade`](https://mantlescan.xyz/address/0x888D23980F22f0647923e0379F2b451389988ade) |
+
+### Why real USDT0 plus mocks for sUSDe and USDY on mainnet?
+
+USDT0 is the only one of the three with a canonical Mantle mainnet deployment, so the protocol settles in real USDT0. sUSDe is not natively on Mantle mainnet (Ethena's sUSDe lives on Ethereum and only reaches Mantle through bridges), and USDY is KYC-gated by Ondo, which would block our bot and bettor wallets without a multi-week whitelisting process. For the hackathon window we ship clearly-labeled `MockSUSDe` and `MockUSDY` for the yield tiers, both of which mirror the mainnet share-price growth surface (sUSDe is ERC-4626 at ~12% APY, USDY is 18-dec price-accruing at ~5% APY). Swapping in real Ethena and Ondo deployments is a one-line constructor change when those primitives become available natively on Mantle.
+
 ## Live on Mantle Sepolia (chain id 5003)
 
 Deployer: [`0x3C343AD077983371b29fee386bdBC8a92E934C51`](https://sepolia.mantlescan.xyz/address/0x3C343AD077983371b29fee386bdBC8a92E934C51) — deployed 2026-05-12
@@ -62,10 +82,6 @@ Deployer: [`0x3C343AD077983371b29fee386bdBC8a92E934C51`](https://sepolia.mantles
 | MockSUSDe | [`0x85cf3d6f3d3ef680718cb53b2b6d4b51b341b2a0`](https://sepolia.mantlescan.xyz/address/0x85cf3d6f3d3ef680718cb53b2b6d4b51b341b2a0) |
 | MockUSDY | [`0x4059ae416f06214e92f66a544064b529a31689aa`](https://sepolia.mantlescan.xyz/address/0x4059ae416f06214e92f66a544064b529a31689aa) |
 
-### Why mocks for the three tokens?
-
-None of USDT0, sUSDe, or USDY have an official Mantle Sepolia deployment as of May 2026. Our mocks **mirror the mainnet surface exactly** — USDT0 is 6-dec non-rebasing; sUSDe is ERC-4626 with share-price growth at ~12% APY; USDY is 18-dec price-accruing at ~5% APY. The production swap is a one-line constructor change; mainnet addresses are documented in [`apps/contracts/script/Deploy.s.sol`](apps/contracts/script/Deploy.s.sol).
-
 ---
 
 ## Mantle ecosystem integration depth
@@ -79,7 +95,7 @@ OmenVault doesn't *use* Mantle — it's composed of Mantle primitives.
 | **USDY** (Ondo) | Conservative collateral tier — vault mints USDY against USDT0; yield accrues via per-second price accumulator. | [`CollateralVault.sol`](apps/contracts/src/CollateralVault.sol), [`interfaces/IUSDY.sol`](apps/contracts/src/interfaces/IUSDY.sol) |
 | **Pyth** | Price feed used by Oracle C as a redundant third data source on price-based markets (BTC/ETH closes, ATH/floor). Hermes pull-based — no API key needed. | [`interfaces/IPyth.sol`](apps/contracts/src/interfaces/IPyth.sol), [`bots/oracle-swarm/src/datasources/pyth.ts`](bots/oracle-swarm/src/datasources/pyth.ts) |
 | **cmETH** | v2 premium tier — ETH-denominated markets settled in cmETH for yield-on-yield. Documented as roadmap; constructor-level wiring is in place. | Roadmap |
-| **Mantle Sepolia** | All seven core contracts deployed and verified. Block-explorer-linked from every market UI. | [`script/Deploy.s.sol`](apps/contracts/script/Deploy.s.sol), [`broadcast/Deploy.s.sol/5003/`](apps/contracts/broadcast/) |
+| **Mantle mainnet + Sepolia** | All seven core contracts deployed and verified on both Mantle mainnet (chain 5000, 2026-05-25) and Sepolia (chain 5003). Block-explorer-linked from every market UI. | [`script/DeployMainnet.s.sol`](apps/contracts/script/DeployMainnet.s.sol), [`script/Deploy.s.sol`](apps/contracts/script/Deploy.s.sol) |
 
 **The thesis:** any other chain forces you to bridge or wrap at least one of these. On Mantle, the entire stack composes natively in a single transaction. That's why yield-while-betting ships here first.
 
@@ -89,7 +105,7 @@ OmenVault doesn't *use* Mantle — it's composed of Mantle primitives.
 
 | Partner | Track | How OmenVault integrates | Code |
 |---|---|---|---|
-| **Mantle** | Settlement chain | All 7 contracts on Mantle Sepolia. USDT0 native. sUSDe + USDY + Pyth + cmETH primitives. | Entire `apps/contracts/` |
+| **Mantle** | Settlement chain | All 7 contracts deployed on Mantle mainnet (chain 5000) and Sepolia (chain 5003), verified on Mantlescan. Real USDT0 on mainnet. sUSDe + USDY + Pyth + cmETH primitives. | Entire `apps/contracts/` |
 | **Allora** | AI × Data | **On-chain consumer** reads forecasts with freshness checks. **Off-chain writer bot** polls Upshot v2 endpoint and posts P(YES) on-chain every 60s. Topic ID is pinned to each market at creation. Trader reads `getForecast(topicId)` for position sizing. | [`AlloraConsumer.sol`](apps/contracts/src/AlloraConsumer.sol), [`bots/allora-writer/`](bots/allora-writer/), [`bots/trader/src/allora.ts`](bots/trader/src/allora.ts) |
 | **Nansen** | AI Alpha | Watcher bot polls `/token-screener` for smart-money labels and netflow on tokens referenced by active markets. Caches 24h to respect free-tier quota. Exposes localhost:7755 HTTP endpoint that trader reads. Graceful demo-mode fallback if no API key. | [`bots/nansen-watcher/`](bots/nansen-watcher/) |
 | **Ethena (sUSDe)** | RWA | High-yield collateral tier. Vault deposits → stakes → accrues. Mock mirrors mainnet ERC-4626 surface exactly. | [`CollateralVault.sol`](apps/contracts/src/CollateralVault.sol), [`interfaces/ISUSDe.sol`](apps/contracts/src/interfaces/ISUSDe.sol) |
@@ -176,7 +192,7 @@ OmenVault ships in three phases. The hackathon submission is v1.0.
 
 ### v1.0 — **The Turing Test Hackathon 2026 submission** (shipped)
 
-- ✅ 7 core contracts on Mantle Sepolia (LMSR, soulbound agents, oracle swarm, vault rotation)
+- ✅ 7 core contracts on Mantle mainnet (chain 5000) **and** Mantle Sepolia, all verified (LMSR, soulbound agents, oracle swarm, vault rotation)
 - ✅ Trader agent with LLM signal synthesis (Allora + Nansen + market price)
 - ✅ 3-agent oracle swarm with disjoint data sources + reputation updates
 - ✅ Full Next.js app — 10 routes, wagmi wallet integration, streaming reasoning UI

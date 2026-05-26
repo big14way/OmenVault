@@ -13,6 +13,8 @@
     "fmt:check": "forge fmt --check",
     "deploy:sepolia": "forge script script/Deploy.s.sol --rpc-url $MANTLE_SEPOLIA_RPC_URL --broadcast --verify -vvvv",
     "deploy:dryrun": "forge script script/Deploy.s.sol --rpc-url $MANTLE_SEPOLIA_RPC_URL -vvvv",
+    "deploy:mainnet:dryrun": "forge script script/DeployMainnet.s.sol --rpc-url $MANTLE_MAINNET_RPC_URL --account omenvault-deployer --sender $DEPLOYER_ADDRESS -vvvv",
+    "deploy:mainnet": "forge script script/DeployMainnet.s.sol --rpc-url $MANTLE_MAINNET_RPC_URL --account omenvault-deployer --sender $DEPLOYER_ADDRESS --broadcast --verify --verifier-url https://api.mantlescan.xyz/api --etherscan-api-key $MANTLE_MAINNET_EXPLORER_API_KEY -vvvv",
     "clean": "forge clean"
   }
 }

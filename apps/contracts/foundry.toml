@@ -28,6 +28,8 @@ number_underscore = "thousands"
 
 [rpc_endpoints]
 mantle_sepolia = "${MANTLE_SEPOLIA_RPC_URL}"
+mantle_mainnet = "${MANTLE_MAINNET_RPC_URL}"
 
 [etherscan]
 mantle_sepolia = { key = "${MANTLE_SEPOLIA_EXPLORER_API_KEY}", url = "https://api-sepolia.mantlescan.xyz/api" }
+mantle_mainnet = { key = "${MANTLE_MAINNET_EXPLORER_API_KEY}", url = "https://api.mantlescan.xyz/api" }
