@@ -29,7 +29,7 @@
 import "@omenvault/shared/env";
 import http from "node:http";
 
-const PORT = Number(process.env.NANSEN_WATCHER_PORT ?? 7755);
+const PORT = Number(process.env.PORT ?? process.env.NANSEN_WATCHER_PORT ?? 7755);
 const API_KEY = process.env.NANSEN_API_KEY ?? "";
 const API_BASE = (process.env.NANSEN_BASE_URL ?? process.env.NANSEN_API_BASE ?? "https://api.nansen.ai").replace(/\/$/, "");
 const CACHE_TTL_HOURS = Number(process.env.NANSEN_CACHE_TTL_HOURS ?? 24);
@@ -188,11 +188,28 @@ function resolveSignal(tokenRaw: string): Signal {
     };
 }
 
+// CORS: this watcher is a local dev service the web app fetches from the
+// browser (http://localhost:3000 → http://localhost:7755). Without these
+// headers the browser silently drops the response and the market page's
+// Nansen tab shows nothing. `*` is fine here — the service has no auth and
+// no mutating endpoints, and only ever runs on localhost.
+const CORS_HEADERS = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-allow-headers": "content-type",
+} as const;
+
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
 
+    if (req.method === "OPTIONS") {
+        res.writeHead(204, CORS_HEADERS);
+        res.end();
+        return;
+    }
+
     if (url.pathname === "/health") {
-        res.writeHead(200, {"content-type": "application/json"});
+        res.writeHead(200, {"content-type": "application/json", ...CORS_HEADERS});
         res.end(
             JSON.stringify({
                 ok: true,
@@ -209,7 +226,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/signal") {
         const tokenRaw = (url.searchParams.get("token") ?? "").toLowerCase();
         if (!tokenRaw) {
-            res.writeHead(400, {"content-type": "application/json"});
+            res.writeHead(400, {"content-type": "application/json", ...CORS_HEADERS});
             res.end(JSON.stringify({error: "missing ?token=<address>"}));
             return;
         }
@@ -220,12 +237,12 @@ const server = http.createServer(async (req, res) => {
         } catch (err) {
             console.error("[nansen-watcher] lazy refresh failed:", (err as Error).message);
         }
-        res.writeHead(200, {"content-type": "application/json"});
+        res.writeHead(200, {"content-type": "application/json", ...CORS_HEADERS});
         res.end(JSON.stringify(resolveSignal(tokenRaw)));
         return;
     }
 
-    res.writeHead(404, {"content-type": "application/json"});
+    res.writeHead(404, {"content-type": "application/json", ...CORS_HEADERS});
     res.end(JSON.stringify({error: "not found"}));
 });
 

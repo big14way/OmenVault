@@ -1,0 +1,12 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# Runs nansen-watcher + allora-writer + trader + 3 oracles in one process via
+# concurrently. concurrently auto-restarts any bot that crashes (20 tries, 3s
+# backoff), so a single bad poll loop never takes the whole service down.
+startCommand = "pnpm demo:bots"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/health"
+healthcheckTimeout = 30
