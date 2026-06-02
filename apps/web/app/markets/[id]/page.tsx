@@ -51,7 +51,11 @@ export default function MarketDetailPage() {
     const [tab, setTab] = useState<"activity" | "stats" | "allora" | "nansen">("activity");
 
     if (!market) {
-        if (factoryConfigured && marketLoading) {
+        // Render a loading state while the chain query is in flight OR while the
+        // initial SSR pass renders before react-query has had a chance to run on
+        // the client (without this the SSR HTML would call notFound() and the
+        // browser would never get a chance to fetch the market).
+        if (factoryConfigured && (marketLoading || onChainMarket === undefined)) {
             return (
                 <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-24 text-center">
                     <p className="font-mono text-[12px] uppercase tracking-eyebrow text-fg-mute">
