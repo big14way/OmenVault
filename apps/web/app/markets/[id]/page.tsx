@@ -51,11 +51,13 @@ export default function MarketDetailPage() {
     const [tab, setTab] = useState<"activity" | "stats" | "allora" | "nansen">("activity");
 
     if (!market) {
-        // Render a loading state while the chain query is in flight OR while the
-        // initial SSR pass renders before react-query has had a chance to run on
-        // the client (without this the SSR HTML would call notFound() and the
-        // browser would never get a chance to fetch the market).
-        if (factoryConfigured && (marketLoading || onChainMarket === undefined)) {
+        // Never 404 when the URL looks like an EVM address. The market may
+        // exist on chain but the SSR pass runs before react-query can fetch
+        // (data is undefined on the server), and intermittent RPC errors on
+        // the client should also surface as "loading", not "not found". Only
+        // fall through to notFound() when the URL is malformed.
+        const looksLikeAddress = typeof id === "string" && /^0x[a-fA-F0-9]{40}$/.test(id);
+        if (looksLikeAddress) {
             return (
                 <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-24 text-center">
                     <p className="font-mono text-[12px] uppercase tracking-eyebrow text-fg-mute">
